@@ -1,0 +1,1 @@
+Lagra is a unified inventory management system for tracking both products and internal assets in one place.
