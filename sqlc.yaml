@@ -1,0 +1,45 @@
+version: "2"
+sql:
+  - schema: "sql/schema"
+    queries: "sql/queries"
+    engine: "postgresql"
+    gen:
+      go:
+        sql_package: "pgx/v5"
+        out: "internal/database/sqlc"
+        overrides:
+          - db_type: "uuid"
+            nullable: true
+            go_type:
+              import: "github.com/google/uuid"
+              type: "NullUUID"
+          - db_type: "uuid"
+            nullable: false
+            go_type:
+              import: "github.com/google/uuid"
+              type: "UUID"
+          - db_type: "pg_catalog.timestamp"
+            nullable: true
+            go_type:
+              type: "sql.NullTime"
+          - db_type: "pg_catalog.timestamp"
+            nullable: false
+            go_type:
+              type: "time.Time"
+          - db_type: "pg_catalog.int4"
+            nullable: true
+            go_type:
+              type: "sql.NullInt32"
+          - db_type: "text"
+            nullable: true
+            go_type:
+              type: "sql.NullString"
+          - db_type: "pg_catalog.bool"
+            nullable: true
+            go_type:
+              type: "sql.NullBool"
+
+overrides:
+  go:
+    rename:
+      accounts_user: AccountsUsers
