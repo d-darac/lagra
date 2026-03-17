@@ -705,7 +705,7 @@ type UpdateItemRow struct {
 	Description       sql.NullString
 	GroupID           uuid.NullUUID
 	HasVariants       bool
-	ItemIdentifiersID uuid.UUID
+	ItemIdentifiersID uuid.NullUUID
 	InventoryID       uuid.NullUUID
 	Name              string
 	ParentItemID      uuid.NullUUID
