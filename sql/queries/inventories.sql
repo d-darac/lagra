@@ -37,6 +37,20 @@ FROM inventories
 WHERE id = $1 AND account_id = $2;
 --
 
+-- name: GetInventoriesByIDs :many
+SELECT
+    id,
+    created_at,
+    updated_at,
+    in_stock,
+    orderable,
+    reserved
+FROM inventories
+WHERE account_id = sqlc.arg('account_id')
+    AND id = ANY(sqlc.arg('IDs')::uuid[])
+ORDER BY created_at DESC, id DESC;
+--
+
 -- name: ListInventories :many
 SELECT *
 FROM
@@ -185,24 +199,10 @@ FROM
 ORDER BY created_at DESC, id DESC;
 --
 
--- name: ListInventoriesByIds :many
-SELECT
-    id,
-    created_at,
-    updated_at,
-    in_stock,
-    orderable,
-    reserved
-FROM inventories
-WHERE account_id = sqlc.arg('account_id')
-    AND id = ANY(sqlc.arg('ids')::uuid[])
-ORDER BY created_at DESC, id DESC;
---
-
 -- name: UpdateInventory :one
 UPDATE inventories
 SET
-    updated_at = sqlc.arg('updated_at')::timestamp,
+    updated_at = NOW(),
     in_stock = COALESCE(sqlc.narg('in_stock'), in_stock),
     orderable = COALESCE(sqlc.narg('orderable'), orderable),
     reserved = COALESCE(sqlc.narg('reserved'), reserved)

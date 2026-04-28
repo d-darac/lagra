@@ -67,6 +67,27 @@ FROM item_identifiers
 WHERE id = $1 AND account_id = $2;
 --
 
+-- name: GetItemIdentifiersByIDs :many
+SELECT
+	id,
+    created_at,
+    updated_at,
+    ean,
+    gtin,
+    isbn,
+    jan,
+    mpn,
+    nsn,
+    upc,
+    qr,
+    sku,
+    item_id
+FROM item_identifiers
+WHERE account_id = sqlc.arg('account_id')
+    AND id = ANY(sqlc.arg('IDs')::uuid[])
+ORDER BY created_at DESC, id DESC;
+--
+
 -- name: ListItemIdentifiers :many
 SELECT *
 FROM
@@ -162,31 +183,10 @@ FROM
 ORDER BY created_at DESC, id DESC;
 --
 
--- name: ListItemIdentifiersByIds :many
-SELECT
-	id,
-    created_at,
-    updated_at,
-    ean,
-    gtin,
-    isbn,
-    jan,
-    mpn,
-    nsn,
-    upc,
-    qr,
-    sku,
-    item_id
-FROM item_identifiers
-WHERE account_id = sqlc.arg('account_id')
-    AND id = ANY(sqlc.arg('ids')::uuid[])
-ORDER BY created_at DESC, id DESC;
---
-
 -- name: UpdateItemIdentifier :one
 UPDATE item_identifiers
 SET
-    updated_at = sqlc.arg('updated_at')::timestamp,
+    updated_at = NOW(),
     ean = COALESCE(sqlc.narg('ean'), ean),
     gtin = COALESCE(sqlc.narg('gtin'), gtin),
     isbn = COALESCE(sqlc.narg('isbn'), isbn),

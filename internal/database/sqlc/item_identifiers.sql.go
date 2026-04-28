@@ -199,6 +199,83 @@ func (q *Queries) GetItemIdentifier(ctx context.Context, arg GetItemIdentifierPa
 	return i, err
 }
 
+const getItemIdentifiersByIDs = `-- name: GetItemIdentifiersByIDs :many
+
+SELECT
+	id,
+    created_at,
+    updated_at,
+    ean,
+    gtin,
+    isbn,
+    jan,
+    mpn,
+    nsn,
+    upc,
+    qr,
+    sku,
+    item_id
+FROM item_identifiers
+WHERE account_id = $1
+    AND id = ANY($2::uuid[])
+ORDER BY created_at DESC, id DESC
+`
+
+type GetItemIdentifiersByIDsParams struct {
+	AccountID uuid.UUID
+	IDs       []uuid.UUID
+}
+
+type GetItemIdentifiersByIDsRow struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Ean       sql.NullString
+	Gtin      sql.NullString
+	Isbn      sql.NullString
+	Jan       sql.NullString
+	Mpn       sql.NullString
+	Nsn       sql.NullString
+	Upc       sql.NullString
+	Qr        sql.NullString
+	Sku       sql.NullString
+	ItemID    uuid.UUID
+}
+
+func (q *Queries) GetItemIdentifiersByIDs(ctx context.Context, arg GetItemIdentifiersByIDsParams) ([]GetItemIdentifiersByIDsRow, error) {
+	rows, err := q.db.Query(ctx, getItemIdentifiersByIDs, arg.AccountID, arg.IDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetItemIdentifiersByIDsRow
+	for rows.Next() {
+		var i GetItemIdentifiersByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Ean,
+			&i.Gtin,
+			&i.Isbn,
+			&i.Jan,
+			&i.Mpn,
+			&i.Nsn,
+			&i.Upc,
+			&i.Qr,
+			&i.Sku,
+			&i.ItemID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listItemIdentifiers = `-- name: ListItemIdentifiers :many
 
 SELECT id, created_at, updated_at, ean, gtin, isbn, jan, mpn, nsn, upc, qr, sku, item_id
@@ -377,98 +454,21 @@ func (q *Queries) ListItemIdentifiers(ctx context.Context, arg ListItemIdentifie
 	return items, nil
 }
 
-const listItemIdentifiersByIds = `-- name: ListItemIdentifiersByIds :many
-
-SELECT
-	id,
-    created_at,
-    updated_at,
-    ean,
-    gtin,
-    isbn,
-    jan,
-    mpn,
-    nsn,
-    upc,
-    qr,
-    sku,
-    item_id
-FROM item_identifiers
-WHERE account_id = $1
-    AND id = ANY($2::uuid[])
-ORDER BY created_at DESC, id DESC
-`
-
-type ListItemIdentifiersByIdsParams struct {
-	AccountID uuid.UUID
-	Ids       []uuid.UUID
-}
-
-type ListItemIdentifiersByIdsRow struct {
-	ID        uuid.UUID
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	Ean       sql.NullString
-	Gtin      sql.NullString
-	Isbn      sql.NullString
-	Jan       sql.NullString
-	Mpn       sql.NullString
-	Nsn       sql.NullString
-	Upc       sql.NullString
-	Qr        sql.NullString
-	Sku       sql.NullString
-	ItemID    uuid.UUID
-}
-
-func (q *Queries) ListItemIdentifiersByIds(ctx context.Context, arg ListItemIdentifiersByIdsParams) ([]ListItemIdentifiersByIdsRow, error) {
-	rows, err := q.db.Query(ctx, listItemIdentifiersByIds, arg.AccountID, arg.Ids)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListItemIdentifiersByIdsRow
-	for rows.Next() {
-		var i ListItemIdentifiersByIdsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.Ean,
-			&i.Gtin,
-			&i.Isbn,
-			&i.Jan,
-			&i.Mpn,
-			&i.Nsn,
-			&i.Upc,
-			&i.Qr,
-			&i.Sku,
-			&i.ItemID,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const updateItemIdentifier = `-- name: UpdateItemIdentifier :one
 
 UPDATE item_identifiers
 SET
-    updated_at = $1::timestamp,
-    ean = COALESCE($2, ean),
-    gtin = COALESCE($3, gtin),
-    isbn = COALESCE($4, isbn),
-    jan = COALESCE($5, jan),
-    mpn = COALESCE($6, mpn),
-    nsn = COALESCE($7, nsn),
-    upc = COALESCE($8, upc),
-    qr = COALESCE($9, qr),
-    sku = COALESCE($10, sku)
-WHERE id = $11 AND account_id = $12
+    updated_at = NOW(),
+    ean = COALESCE($1, ean),
+    gtin = COALESCE($2, gtin),
+    isbn = COALESCE($3, isbn),
+    jan = COALESCE($4, jan),
+    mpn = COALESCE($5, mpn),
+    nsn = COALESCE($6, nsn),
+    upc = COALESCE($7, upc),
+    qr = COALESCE($8, qr),
+    sku = COALESCE($9, sku)
+WHERE id = $10 AND account_id = $11
 RETURNING
     id,
     created_at,
@@ -486,7 +486,6 @@ RETURNING
 `
 
 type UpdateItemIdentifierParams struct {
-	UpdatedAt time.Time
 	Ean       sql.NullString
 	Gtin      sql.NullString
 	Isbn      sql.NullString
@@ -518,7 +517,6 @@ type UpdateItemIdentifierRow struct {
 
 func (q *Queries) UpdateItemIdentifier(ctx context.Context, arg UpdateItemIdentifierParams) (UpdateItemIdentifierRow, error) {
 	row := q.db.QueryRow(ctx, updateItemIdentifier,
-		arg.UpdatedAt,
 		arg.Ean,
 		arg.Gtin,
 		arg.Isbn,

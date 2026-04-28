@@ -70,19 +70,18 @@ const deleteAccount = `-- name: DeleteAccount :exec
 
 UPDATE accounts
 SET
-    updated_at = $1,
+    updated_at = NOW(),
     deleted = TRUE
-WHERE id = $2 AND owner_id = $3
+WHERE id = $1 AND owner_id = $2
 `
 
 type DeleteAccountParams struct {
-	UpdatedAt time.Time
-	ID        uuid.UUID
-	OwnerID   uuid.NullUUID
+	ID      uuid.UUID
+	OwnerID uuid.NullUUID
 }
 
 func (q *Queries) DeleteAccount(ctx context.Context, arg DeleteAccountParams) error {
-	_, err := q.db.Exec(ctx, deleteAccount, arg.UpdatedAt, arg.ID, arg.OwnerID)
+	_, err := q.db.Exec(ctx, deleteAccount, arg.ID, arg.OwnerID)
 	return err
 }
 
@@ -127,7 +126,7 @@ func (q *Queries) GetAccount(ctx context.Context, arg GetAccountParams) (GetAcco
 	return i, err
 }
 
-const listAccountsByOwnerId = `-- name: ListAccountsByOwnerId :many
+const listAccountsByOwnerID = `-- name: ListAccountsByOwnerID :many
 
 SELECT
     id,
@@ -142,12 +141,12 @@ ORDER BY created_at DESC
 LIMIT COALESCE($2, 10)
 `
 
-type ListAccountsByOwnerIdParams struct {
+type ListAccountsByOwnerIDParams struct {
 	OwnerID uuid.NullUUID
 	Limit   interface{}
 }
 
-type ListAccountsByOwnerIdRow struct {
+type ListAccountsByOwnerIDRow struct {
 	ID        uuid.UUID
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -156,15 +155,15 @@ type ListAccountsByOwnerIdRow struct {
 	OwnerID   uuid.NullUUID
 }
 
-func (q *Queries) ListAccountsByOwnerId(ctx context.Context, arg ListAccountsByOwnerIdParams) ([]ListAccountsByOwnerIdRow, error) {
-	rows, err := q.db.Query(ctx, listAccountsByOwnerId, arg.OwnerID, arg.Limit)
+func (q *Queries) ListAccountsByOwnerID(ctx context.Context, arg ListAccountsByOwnerIDParams) ([]ListAccountsByOwnerIDRow, error) {
+	rows, err := q.db.Query(ctx, listAccountsByOwnerID, arg.OwnerID, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListAccountsByOwnerIdRow
+	var items []ListAccountsByOwnerIDRow
 	for rows.Next() {
-		var i ListAccountsByOwnerIdRow
+		var i ListAccountsByOwnerIDRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.CreatedAt,
@@ -183,7 +182,7 @@ func (q *Queries) ListAccountsByOwnerId(ctx context.Context, arg ListAccountsByO
 	return items, nil
 }
 
-const listAccountsByUserId = `-- name: ListAccountsByUserId :many
+const listAccountsByUserID = `-- name: ListAccountsByUserID :many
 
 SELECT
     accounts.id,
@@ -200,12 +199,12 @@ ORDER BY accounts.created_at DESC
 LIMIT COALESCE($2, 10)
 `
 
-type ListAccountsByUserIdParams struct {
+type ListAccountsByUserIDParams struct {
 	UserID uuid.UUID
 	Limit  interface{}
 }
 
-type ListAccountsByUserIdRow struct {
+type ListAccountsByUserIDRow struct {
 	ID        uuid.UUID
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -214,15 +213,15 @@ type ListAccountsByUserIdRow struct {
 	OwnerID   uuid.NullUUID
 }
 
-func (q *Queries) ListAccountsByUserId(ctx context.Context, arg ListAccountsByUserIdParams) ([]ListAccountsByUserIdRow, error) {
-	rows, err := q.db.Query(ctx, listAccountsByUserId, arg.UserID, arg.Limit)
+func (q *Queries) ListAccountsByUserID(ctx context.Context, arg ListAccountsByUserIDParams) ([]ListAccountsByUserIDRow, error) {
+	rows, err := q.db.Query(ctx, listAccountsByUserID, arg.UserID, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListAccountsByUserIdRow
+	var items []ListAccountsByUserIDRow
 	for rows.Next() {
-		var i ListAccountsByUserIdRow
+		var i ListAccountsByUserIDRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.CreatedAt,
@@ -245,10 +244,10 @@ const updateAccount = `-- name: UpdateAccount :one
 
 UPDATE accounts
 SET
-    updated_at = $1::timestamp,
-    country = COALESCE($2, country),
-    nickname = COALESCE($3, nickname)
-WHERE id = $4 AND owner_id = $5
+    updated_at = NOW(),
+    country = COALESCE($1, country),
+    nickname = COALESCE($2, nickname)
+WHERE id = $3 AND owner_id = $4
 RETURNING
     id,
     created_at,
@@ -259,11 +258,10 @@ RETURNING
 `
 
 type UpdateAccountParams struct {
-	UpdatedAt time.Time
-	Country   NullCountry
-	Nickname  sql.NullString
-	ID        uuid.UUID
-	OwnerID   uuid.NullUUID
+	Country  NullCountry
+	Nickname sql.NullString
+	ID       uuid.UUID
+	OwnerID  uuid.NullUUID
 }
 
 type UpdateAccountRow struct {
@@ -277,7 +275,6 @@ type UpdateAccountRow struct {
 
 func (q *Queries) UpdateAccount(ctx context.Context, arg UpdateAccountParams) (UpdateAccountRow, error) {
 	row := q.db.QueryRow(ctx, updateAccount,
-		arg.UpdatedAt,
 		arg.Country,
 		arg.Nickname,
 		arg.ID,

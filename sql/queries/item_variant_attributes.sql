@@ -124,7 +124,7 @@ ORDER BY created_at DESC, id DESC;
 -- name: UpdateItemVariantAttribute :one
 UPDATE item_variant_attributes
 SET
-    updated_at = sqlc.arg('updated_at')::timestamp,
+    updated_at = NOW(),
     name = COALESCE(sqlc.narg('name'), name)
 WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id')
 RETURNING

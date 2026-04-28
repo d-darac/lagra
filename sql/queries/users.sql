@@ -49,7 +49,7 @@ WHERE email = $1;
 -- name: UpdateUser :one
 UPDATE users
 SET
-    updated_at = sqlc.arg('updated_at')::timestamp,
+    updated_at = NOW(),
     email = COALESCE(sqlc.narg('email'), email),
     hashed_password = COALESCE(sqlc.narg('hashed_password'), hashed_password),
     name = COALESCE(sqlc.narg('name'), name)

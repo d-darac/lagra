@@ -39,6 +39,20 @@ FROM groups
 WHERE id = $1 AND account_id = $2;
 --
 
+-- name: GetGroupsByIDs :many
+SELECT
+	id,
+	created_at,
+	updated_at,
+	description,
+	name,
+	parent_group_id
+FROM groups
+WHERE account_id = sqlc.arg('account_id')
+    AND id = ANY(sqlc.arg('IDs')::uuid[])
+ORDER BY created_at DESC, id DESC;
+--
+
 -- name: ListGroups :many
 SELECT *
 FROM 
@@ -94,23 +108,23 @@ FROM
         )
     AND 
         (
-            sqlc.narg('starting_after')::typeid IS NULL
+            sqlc.narg('starting_after')::uuid IS NULL
             OR 
             (
                 (
                     sqlc.narg('starting_after_date')::timestamp,
-                    sqlc.narg('starting_after')::typeid
+                    sqlc.narg('starting_after')::uuid
                 ) > (groups.created_at, groups.id)
             )
         )
     AND 
         (
-            sqlc.narg('ending_before')::typeid IS NULL
+            sqlc.narg('ending_before')::uuid IS NULL
             OR 
             (
                 (
                     sqlc.narg('ending_before_date')::timestamp,
-                    sqlc.narg('ending_before')::typeid
+                    sqlc.narg('ending_before')::uuid
                 ) < (groups.created_at, groups.id)
             )
         )
@@ -126,13 +140,13 @@ FROM
         )
     AND 
         (
-            sqlc.narg('parent_group_id')::typeid IS NULL 
-            OR groups.parent_group_id = sqlc.narg('parent_group_id')::typeid
+            sqlc.narg('parent_group_id')::uuid IS NULL 
+            OR groups.parent_group_id = sqlc.narg('parent_group_id')::uuid
         )
     ORDER BY 
     (
         CASE 
-            WHEN sqlc.narg('ending_before')::typeid IS NOT NULL 
+            WHEN sqlc.narg('ending_before')::uuid IS NOT NULL 
             THEN (groups.created_at, groups.id)
         END
     ) ASC,
@@ -142,24 +156,10 @@ FROM
 ORDER BY created_at DESC, id DESC;
 --
 
--- name: ListGroupsByIds :many
-SELECT
-	id,
-	created_at,
-	updated_at,
-	description,
-	name,
-	parent_group_id
-FROM groups
-WHERE account_id = sqlc.arg('account_id')
-    AND id = ANY(sqlc.arg('ids')::typeid[])
-ORDER BY created_at DESC, id DESC;
---
-
 -- name: UpdateGroup :one
 UPDATE groups
 SET
-    updated_at = sqlc.arg('updated_at')::timestamp,
+    updated_at = NOW(),
     description = COALESCE(sqlc.narg('description'), description),
     name = COALESCE(sqlc.narg('name'), name),
     parent_group_id = COALESCE(sqlc.narg('parent_group_id'), parent_group_id)

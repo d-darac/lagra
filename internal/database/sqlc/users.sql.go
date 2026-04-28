@@ -142,11 +142,11 @@ const updateUser = `-- name: UpdateUser :one
 
 UPDATE users
 SET
-    updated_at = $1::timestamp,
-    email = COALESCE($2, email),
-    hashed_password = COALESCE($3, hashed_password),
-    name = COALESCE($4, name)
-WHERE id = $5
+    updated_at = NOW(),
+    email = COALESCE($1, email),
+    hashed_password = COALESCE($2, hashed_password),
+    name = COALESCE($3, name)
+WHERE id = $4
 RETURNING
     id,
     created_at,
@@ -156,7 +156,6 @@ RETURNING
 `
 
 type UpdateUserParams struct {
-	UpdatedAt      time.Time
 	Email          sql.NullString
 	HashedPassword sql.NullString
 	Name           sql.NullString
@@ -173,7 +172,6 @@ type UpdateUserRow struct {
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateUserRow, error) {
 	row := q.db.QueryRow(ctx, updateUser,
-		arg.UpdatedAt,
 		arg.Email,
 		arg.HashedPassword,
 		arg.Name,

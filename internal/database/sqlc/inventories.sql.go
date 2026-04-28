@@ -80,6 +80,62 @@ func (q *Queries) DeleteInventory(ctx context.Context, arg DeleteInventoryParams
 	return err
 }
 
+const getInventoriesByIDs = `-- name: GetInventoriesByIDs :many
+
+SELECT
+    id,
+    created_at,
+    updated_at,
+    in_stock,
+    orderable,
+    reserved
+FROM inventories
+WHERE account_id = $1
+    AND id = ANY($2::uuid[])
+ORDER BY created_at DESC, id DESC
+`
+
+type GetInventoriesByIDsParams struct {
+	AccountID uuid.UUID
+	IDs       []uuid.UUID
+}
+
+type GetInventoriesByIDsRow struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	InStock   int32
+	Orderable sql.NullInt32
+	Reserved  sql.NullInt32
+}
+
+func (q *Queries) GetInventoriesByIDs(ctx context.Context, arg GetInventoriesByIDsParams) ([]GetInventoriesByIDsRow, error) {
+	rows, err := q.db.Query(ctx, getInventoriesByIDs, arg.AccountID, arg.IDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetInventoriesByIDsRow
+	for rows.Next() {
+		var i GetInventoriesByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.InStock,
+			&i.Orderable,
+			&i.Reserved,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getInventory = `-- name: GetInventory :one
 
 SELECT
@@ -362,71 +418,15 @@ func (q *Queries) ListInventories(ctx context.Context, arg ListInventoriesParams
 	return items, nil
 }
 
-const listInventoriesByIds = `-- name: ListInventoriesByIds :many
-
-SELECT
-    id,
-    created_at,
-    updated_at,
-    in_stock,
-    orderable,
-    reserved
-FROM inventories
-WHERE account_id = $1
-    AND id = ANY($2::uuid[])
-ORDER BY created_at DESC, id DESC
-`
-
-type ListInventoriesByIdsParams struct {
-	AccountID uuid.UUID
-	Ids       []uuid.UUID
-}
-
-type ListInventoriesByIdsRow struct {
-	ID        uuid.UUID
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	InStock   int32
-	Orderable sql.NullInt32
-	Reserved  sql.NullInt32
-}
-
-func (q *Queries) ListInventoriesByIds(ctx context.Context, arg ListInventoriesByIdsParams) ([]ListInventoriesByIdsRow, error) {
-	rows, err := q.db.Query(ctx, listInventoriesByIds, arg.AccountID, arg.Ids)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListInventoriesByIdsRow
-	for rows.Next() {
-		var i ListInventoriesByIdsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.InStock,
-			&i.Orderable,
-			&i.Reserved,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const updateInventory = `-- name: UpdateInventory :one
 
 UPDATE inventories
 SET
-    updated_at = $1::timestamp,
-    in_stock = COALESCE($2, in_stock),
-    orderable = COALESCE($3, orderable),
-    reserved = COALESCE($4, reserved)
-WHERE id = $5 AND account_id = $6
+    updated_at = NOW(),
+    in_stock = COALESCE($1, in_stock),
+    orderable = COALESCE($2, orderable),
+    reserved = COALESCE($3, reserved)
+WHERE id = $4 AND account_id = $5
 RETURNING
     id,
     created_at,
@@ -437,7 +437,6 @@ RETURNING
 `
 
 type UpdateInventoryParams struct {
-	UpdatedAt time.Time
 	InStock   sql.NullInt32
 	Orderable sql.NullInt32
 	Reserved  sql.NullInt32
@@ -456,7 +455,6 @@ type UpdateInventoryRow struct {
 
 func (q *Queries) UpdateInventory(ctx context.Context, arg UpdateInventoryParams) (UpdateInventoryRow, error) {
 	row := q.db.QueryRow(ctx, updateInventory,
-		arg.UpdatedAt,
 		arg.InStock,
 		arg.Orderable,
 		arg.Reserved,

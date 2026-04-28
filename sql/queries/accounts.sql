@@ -25,9 +25,9 @@ RETURNING
 -- name: DeleteAccount :exec
 UPDATE accounts
 SET
-    updated_at = $1,
+    updated_at = NOW(),
     deleted = TRUE
-WHERE id = $2 AND owner_id = $3;
+WHERE id = $1 AND owner_id = $2;
 --
 
 -- name: GetAccount :one
@@ -42,7 +42,7 @@ FROM accounts
 WHERE id = $1 AND owner_id = $2;
 --
 
--- name: ListAccountsByOwnerId :many
+-- name: ListAccountsByOwnerID :many
 SELECT
     id,
     created_at,
@@ -56,7 +56,7 @@ ORDER BY created_at DESC
 LIMIT COALESCE(sqlc.narg('limit'), 10);
 --
 
--- name: ListAccountsByUserId :many
+-- name: ListAccountsByUserID :many
 SELECT
     accounts.id,
     accounts.created_at,
@@ -75,7 +75,7 @@ LIMIT COALESCE(sqlc.narg('limit'), 10);;
 -- name: UpdateAccount :one
 UPDATE accounts
 SET
-    updated_at = sqlc.arg('updated_at')::timestamp,
+    updated_at = NOW(),
     country = COALESCE(sqlc.narg('country'), country),
     nickname = COALESCE(sqlc.narg('nickname'), nickname)
 WHERE id = sqlc.arg('id') AND owner_id = sqlc.arg('owner_id')

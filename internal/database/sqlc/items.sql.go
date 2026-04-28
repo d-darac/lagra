@@ -216,7 +216,91 @@ func (q *Queries) GetItem(ctx context.Context, arg GetItemParams) (GetItemRow, e
 	return i, err
 }
 
-const listItemIdsByInventory = `-- name: ListItemIdsByInventory :many
+const getItemsByIDs = `-- name: GetItemsByIDs :many
+
+SELECT
+    items.id,
+    items.created_at,
+    items.updated_at,
+    items.active,
+    items.description,
+    items.group_id,
+    items.has_variants,
+    item_identifiers.id AS item_identifiers_id,
+    items.inventory_id,
+    items.name,
+    items.parent_item_id,
+    items.price_amount,
+    items.price_currency,
+    items.type,
+    items.variant
+FROM items
+LEFT JOIN item_identifiers ON items.id = item_identifiers.item_id
+WHERE items.account_id = $1
+    AND items.id = ANY($2::uuid[])
+ORDER BY items.created_at DESC, items.id DESC
+`
+
+type GetItemsByIDsParams struct {
+	AccountID uuid.UUID
+	IDs       []uuid.UUID
+}
+
+type GetItemsByIDsRow struct {
+	ID                uuid.UUID
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	Active            bool
+	Description       sql.NullString
+	GroupID           uuid.NullUUID
+	HasVariants       bool
+	ItemIdentifiersID uuid.NullUUID
+	InventoryID       uuid.NullUUID
+	Name              string
+	ParentItemID      uuid.NullUUID
+	PriceAmount       sql.NullInt32
+	PriceCurrency     NullCurrency
+	Type              ItemType
+	Variant           bool
+}
+
+func (q *Queries) GetItemsByIDs(ctx context.Context, arg GetItemsByIDsParams) ([]GetItemsByIDsRow, error) {
+	rows, err := q.db.Query(ctx, getItemsByIDs, arg.AccountID, arg.IDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetItemsByIDsRow
+	for rows.Next() {
+		var i GetItemsByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Active,
+			&i.Description,
+			&i.GroupID,
+			&i.HasVariants,
+			&i.ItemIdentifiersID,
+			&i.InventoryID,
+			&i.Name,
+			&i.ParentItemID,
+			&i.PriceAmount,
+			&i.PriceCurrency,
+			&i.Type,
+			&i.Variant,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listItemIDsByInventory = `-- name: ListItemIDsByInventory :many
 
 SELECT id
 FROM
@@ -261,7 +345,7 @@ FROM
 ORDER BY created_at DESC, id DESC
 `
 
-type ListItemIdsByInventoryParams struct {
+type ListItemIDsByInventoryParams struct {
 	AccountID         uuid.UUID
 	InventoryID       uuid.UUID
 	StartingAfter     uuid.NullUUID
@@ -271,8 +355,8 @@ type ListItemIdsByInventoryParams struct {
 	Limit             sql.NullInt32
 }
 
-func (q *Queries) ListItemIdsByInventory(ctx context.Context, arg ListItemIdsByInventoryParams) ([]uuid.UUID, error) {
-	rows, err := q.db.Query(ctx, listItemIdsByInventory,
+func (q *Queries) ListItemIDsByInventory(ctx context.Context, arg ListItemIDsByInventoryParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, listItemIDsByInventory,
 		arg.AccountID,
 		arg.InventoryID,
 		arg.StartingAfter,
@@ -561,109 +645,25 @@ func (q *Queries) ListItems(ctx context.Context, arg ListItemsParams) ([]ListIte
 	return items, nil
 }
 
-const listItemsByIds = `-- name: ListItemsByIds :many
-
-SELECT
-    items.id,
-    items.created_at,
-    items.updated_at,
-    items.active,
-    items.description,
-    items.group_id,
-    items.has_variants,
-    item_identifiers.id AS item_identifiers_id,
-    items.inventory_id,
-    items.name,
-    items.parent_item_id,
-    items.price_amount,
-    items.price_currency,
-    items.type,
-    items.variant
-FROM items
-LEFT JOIN item_identifiers ON items.id = item_identifiers.item_id
-WHERE items.account_id = $1
-    AND items.id = ANY($2::uuid[])
-ORDER BY items.created_at DESC, items.id DESC
-`
-
-type ListItemsByIdsParams struct {
-	AccountID uuid.UUID
-	Ids       []uuid.UUID
-}
-
-type ListItemsByIdsRow struct {
-	ID                uuid.UUID
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
-	Active            bool
-	Description       sql.NullString
-	GroupID           uuid.NullUUID
-	HasVariants       bool
-	ItemIdentifiersID uuid.NullUUID
-	InventoryID       uuid.NullUUID
-	Name              string
-	ParentItemID      uuid.NullUUID
-	PriceAmount       sql.NullInt32
-	PriceCurrency     NullCurrency
-	Type              ItemType
-	Variant           bool
-}
-
-func (q *Queries) ListItemsByIds(ctx context.Context, arg ListItemsByIdsParams) ([]ListItemsByIdsRow, error) {
-	rows, err := q.db.Query(ctx, listItemsByIds, arg.AccountID, arg.Ids)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListItemsByIdsRow
-	for rows.Next() {
-		var i ListItemsByIdsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.Active,
-			&i.Description,
-			&i.GroupID,
-			&i.HasVariants,
-			&i.ItemIdentifiersID,
-			&i.InventoryID,
-			&i.Name,
-			&i.ParentItemID,
-			&i.PriceAmount,
-			&i.PriceCurrency,
-			&i.Type,
-			&i.Variant,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const updateItem = `-- name: UpdateItem :one
 
 UPDATE items
 SET
-    updated_at = $1::timestamp,
-    active = COALESCE($2::boolean, active),
-    description = COALESCE($3, description),
-    group_id = COALESCE($4, group_id),
-    has_variants = COALESCE($5, has_variants),
-    inventory_id = COALESCE($6, inventory_id),
-    name = COALESCE($7, name),
-    price_amount = COALESCE($8, price_amount),
-    price_currency = COALESCE($9, price_currency)
+    updated_at = NOW(),
+    active = COALESCE($1::boolean, active),
+    description = COALESCE($2, description),
+    group_id = COALESCE($3, group_id),
+    has_variants = COALESCE($4, has_variants),
+    inventory_id = COALESCE($5, inventory_id),
+    name = COALESCE($6, name),
+    price_amount = COALESCE($7, price_amount),
+    price_currency = COALESCE($8, price_currency)
 FROM
     items AS i
     LEFT JOIN item_identifiers ON i.id = item_identifiers.item_id
 WHERE
-    i.id = $10
-    AND i.account_id = $11
+    i.id = $9
+    AND i.account_id = $10
     AND i.id = items.id
 RETURNING
     items.id,
@@ -684,7 +684,6 @@ RETURNING
 `
 
 type UpdateItemParams struct {
-	UpdatedAt     time.Time
 	Active        sql.NullBool
 	Description   sql.NullString
 	GroupID       uuid.NullUUID
@@ -705,7 +704,7 @@ type UpdateItemRow struct {
 	Description       sql.NullString
 	GroupID           uuid.NullUUID
 	HasVariants       bool
-	ItemIdentifiersID uuid.NullUUID
+	ItemIdentifiersID uuid.UUID
 	InventoryID       uuid.NullUUID
 	Name              string
 	ParentItemID      uuid.NullUUID
@@ -717,7 +716,6 @@ type UpdateItemRow struct {
 
 func (q *Queries) UpdateItem(ctx context.Context, arg UpdateItemParams) (UpdateItemRow, error) {
 	row := q.db.QueryRow(ctx, updateItem,
-		arg.UpdatedAt,
 		arg.Active,
 		arg.Description,
 		arg.GroupID,

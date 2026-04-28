@@ -99,7 +99,7 @@ LEFT JOIN item_identifiers ON items.id = item_identifiers.item_id
 WHERE items.id = $1 AND items.account_id = $2;
 --
 
--- name: ListItemIdsByInventory :many
+-- name: ListItemIDsByInventory :many
 SELECT id
 FROM
 (
@@ -141,6 +141,30 @@ FROM
     LIMIT COALESCE(sqlc.narg('limit')::integer, 10) + 1
 )
 ORDER BY created_at DESC, id DESC;
+--
+
+-- name: GetItemsByIDs :many
+SELECT
+    items.id,
+    items.created_at,
+    items.updated_at,
+    items.active,
+    items.description,
+    items.group_id,
+    items.has_variants,
+    item_identifiers.id AS item_identifiers_id,
+    items.inventory_id,
+    items.name,
+    items.parent_item_id,
+    items.price_amount,
+    items.price_currency,
+    items.type,
+    items.variant
+FROM items
+LEFT JOIN item_identifiers ON items.id = item_identifiers.item_id
+WHERE items.account_id = sqlc.arg('account_id')
+    AND items.id = ANY(sqlc.arg('IDs')::uuid[])
+ORDER BY items.created_at DESC, items.id DESC;
 --
 
 -- name: ListItems :many
@@ -296,34 +320,10 @@ FROM
 ORDER BY created_at DESC, id DESC;
 --
 
--- name: ListItemsByIds :many
-SELECT
-    items.id,
-    items.created_at,
-    items.updated_at,
-    items.active,
-    items.description,
-    items.group_id,
-    items.has_variants,
-    item_identifiers.id AS item_identifiers_id,
-    items.inventory_id,
-    items.name,
-    items.parent_item_id,
-    items.price_amount,
-    items.price_currency,
-    items.type,
-    items.variant
-FROM items
-LEFT JOIN item_identifiers ON items.id = item_identifiers.item_id
-WHERE items.account_id = sqlc.arg('account_id')
-    AND items.id = ANY(sqlc.arg('ids')::uuid[])
-ORDER BY items.created_at DESC, items.id DESC;
---
-
 -- name: UpdateItem :one
 UPDATE items
 SET
-    updated_at = sqlc.arg('updated_at')::timestamp,
+    updated_at = NOW(),
     active = COALESCE(sqlc.narg('active')::boolean, active),
     description = COALESCE(sqlc.narg('description'), description),
     group_id = COALESCE(sqlc.narg('group_id'), group_id),

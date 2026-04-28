@@ -35,7 +35,7 @@ WHERE id = $1 AND account_id = $1;
 -- name: ExpireApiKey :exec
 UPDATE api_keys
 SET
-    updated_at = sqlc.arg('updated_at')::timestamp,
+    updated_at = NOW(),
     expires_at = sqlc.arg('expires_at')::timestamp
 WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id');
 --
@@ -158,7 +158,7 @@ ORDER BY created_at DESC, id DESC;
 -- name: UpdateApiKey :one
 UPDATE api_keys
 SET
-    updated_at = sqlc.arg('updated_at')::timestamp,
+    updated_at = NOW(),
     name = COALESCE(sqlc.narg('name'), name),
     note = COALESCE(sqlc.narg('note'), note)
 WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id')

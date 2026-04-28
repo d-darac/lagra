@@ -238,9 +238,9 @@ const updateItemVariantAttribute = `-- name: UpdateItemVariantAttribute :one
 
 UPDATE item_variant_attributes
 SET
-    updated_at = $1::timestamp,
-    name = COALESCE($2, name)
-WHERE id = $3 AND account_id = $4
+    updated_at = NOW(),
+    name = COALESCE($1, name)
+WHERE id = $2 AND account_id = $3
 RETURNING
     id,
     created_at,
@@ -250,7 +250,6 @@ RETURNING
 `
 
 type UpdateItemVariantAttributeParams struct {
-	UpdatedAt time.Time
 	Name      sql.NullString
 	ID        uuid.UUID
 	AccountID uuid.UUID
@@ -265,12 +264,7 @@ type UpdateItemVariantAttributeRow struct {
 }
 
 func (q *Queries) UpdateItemVariantAttribute(ctx context.Context, arg UpdateItemVariantAttributeParams) (UpdateItemVariantAttributeRow, error) {
-	row := q.db.QueryRow(ctx, updateItemVariantAttribute,
-		arg.UpdatedAt,
-		arg.Name,
-		arg.ID,
-		arg.AccountID,
-	)
+	row := q.db.QueryRow(ctx, updateItemVariantAttribute, arg.Name, arg.ID, arg.AccountID)
 	var i UpdateItemVariantAttributeRow
 	err := row.Scan(
 		&i.ID,

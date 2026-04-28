@@ -98,25 +98,19 @@ const expireApiKey = `-- name: ExpireApiKey :exec
 
 UPDATE api_keys
 SET
-    updated_at = $1::timestamp,
-    expires_at = $2::timestamp
-WHERE id = $3 AND account_id = $4
+    updated_at = NOW(),
+    expires_at = $1::timestamp
+WHERE id = $2 AND account_id = $3
 `
 
 type ExpireApiKeyParams struct {
-	UpdatedAt time.Time
 	ExpiresAt time.Time
 	ID        uuid.UUID
 	AccountID uuid.UUID
 }
 
 func (q *Queries) ExpireApiKey(ctx context.Context, arg ExpireApiKeyParams) error {
-	_, err := q.db.Exec(ctx, expireApiKey,
-		arg.UpdatedAt,
-		arg.ExpiresAt,
-		arg.ID,
-		arg.AccountID,
-	)
+	_, err := q.db.Exec(ctx, expireApiKey, arg.ExpiresAt, arg.ID, arg.AccountID)
 	return err
 }
 
@@ -356,10 +350,10 @@ const updateApiKey = `-- name: UpdateApiKey :one
 
 UPDATE api_keys
 SET
-    updated_at = $1::timestamp,
-    name = COALESCE($2, name),
-    note = COALESCE($3, note)
-WHERE id = $4 AND account_id = $5
+    updated_at = NOW(),
+    name = COALESCE($1, name),
+    note = COALESCE($2, note)
+WHERE id = $3 AND account_id = $4
 RETURNING
     id,
     created_at,
@@ -371,7 +365,6 @@ RETURNING
 `
 
 type UpdateApiKeyParams struct {
-	UpdatedAt time.Time
 	Name      sql.NullString
 	Note      sql.NullString
 	ID        uuid.UUID
@@ -390,7 +383,6 @@ type UpdateApiKeyRow struct {
 
 func (q *Queries) UpdateApiKey(ctx context.Context, arg UpdateApiKeyParams) (UpdateApiKeyRow, error) {
 	row := q.db.QueryRow(ctx, updateApiKey,
-		arg.UpdatedAt,
 		arg.Name,
 		arg.Note,
 		arg.ID,
