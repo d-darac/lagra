@@ -25,10 +25,12 @@ type GetParams struct {
 }
 
 type ListParams struct {
-	AccountID                           typeid.TypeID
-	EndingBefore, StartingAfter         com.NullTypeID
-	startingAfterDate, endingBeforeDate sql.NullTime
-	Limit                               i32.NullInt32
+	endingBeforeDate  sql.NullTime
+	startingAfterDate sql.NullTime
+	AccountID         typeid.TypeID
+	EndingBefore      com.NullTypeID
+	StartingAfter     com.NullTypeID
+	Limit             i32.NullInt32
 }
 
 type GetByIDsParams struct {
