@@ -16,10 +16,10 @@ import (
 
 type AppError struct {
 	Code    *ErrorCode
-	Message string
 	Param   *string
-	Status  int
+	Message string
 	Type    ErrorType
+	Status  int
 }
 
 type ArrayNotGtErr struct {
@@ -96,8 +96,9 @@ type ParameterMissingErr struct {
 type RequestTooLargeErr struct{}
 
 type ResourceNotFoundErr struct {
-	ID, Resource string
-	Param        *string
+	Param    *string
+	ID       string
+	Resource string
 }
 
 type RouteUnknownErr struct {
