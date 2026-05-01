@@ -6,11 +6,11 @@ import (
 
 	"github.com/d-darac/lagra/internal/com"
 	"github.com/d-darac/lagra/internal/services/groups"
+	"github.com/d-darac/lagra/pkg/id"
 	"github.com/jackc/pgx/v5"
-	"go.jetify.com/typeid/v2"
 )
 
-func (h Handlers) Resolve(ctx context.Context, ids []typeid.TypeID, accountID typeid.TypeID) (map[typeid.TypeID]com.Resource, error) {
+func (h Handlers) Resolve(ctx context.Context, ids []id.ID, accountID id.ID) (map[id.ID]com.Resource, error) {
 	groups, err := h.Services.Groups.GetByIDs(ctx, groups.GetByIDsParams{
 		AccountID: accountID,
 		IDs:       ids,
@@ -21,7 +21,7 @@ func (h Handlers) Resolve(ctx context.Context, ids []typeid.TypeID, accountID ty
 		}
 		return nil, err
 	}
-	resources := make(map[typeid.TypeID]com.Resource)
+	resources := make(map[id.ID]com.Resource)
 	for k, v := range groups {
 		resources[k] = v
 	}

@@ -5,13 +5,13 @@ import (
 
 	"github.com/d-darac/lagra/internal/com"
 	"github.com/d-darac/lagra/internal/database"
+	"github.com/d-darac/lagra/pkg/id"
 	"github.com/d-darac/lagra/pkg/str"
-	"go.jetify.com/typeid/v2"
 )
 
 type Group struct {
-	accountID   typeid.TypeID
-	ID          typeid.TypeID  `json:"id"`
+	accountID   id.ID
+	ID          id.ID          `json:"id"`
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
 	Description str.NullString `json:"description"`
@@ -19,14 +19,10 @@ type Group struct {
 	ParentGroup com.Expandable `json:"parent_group"`
 }
 
-func (g Group) AccountID() typeid.TypeID { return g.accountID }
+func (g Group) AccountID() id.ID { return g.accountID }
 
-func (g *Group) MapGroupRow(row database.GroupRow, accountID typeid.TypeID) error {
-	groupID, err := typeid.FromUUID(string(com.TypeIDPrefixGroup), row.ID.String())
-	if err != nil {
-		return err
-	}
-	parentGroupID, err := com.FromNullUUID(string(com.TypeIDPrefixGroup), row.ParentGroupID)
+func (g *Group) MapGroupRow(row database.GroupRow, accountID id.ID) error {
+	groupID, err := id.FromUUID(string(com.TypeIDPrefixGroup), row.ID.String())
 	if err != nil {
 		return err
 	}
@@ -37,7 +33,7 @@ func (g *Group) MapGroupRow(row database.GroupRow, accountID typeid.TypeID) erro
 	g.Description = str.NullString(row.Description)
 	g.Name = row.Name
 	g.ParentGroup = com.Expandable{
-		ID:   parentGroupID,
+		ID:   id.FromNullUUID(string(com.TypeIDPrefixGroup), row.ParentGroupID),
 		Name: string(com.ResourceGroup),
 	}
 	return nil

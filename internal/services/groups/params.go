@@ -1,46 +1,53 @@
 package groups
 
 import (
-	"database/sql"
-
-	"github.com/d-darac/lagra/internal/com"
 	"github.com/d-darac/lagra/pkg/i32"
+	"github.com/d-darac/lagra/pkg/id"
 	"github.com/d-darac/lagra/pkg/str"
-	"go.jetify.com/typeid/v2"
+	"github.com/d-darac/lagra/pkg/t"
 )
 
 type CreateParams struct {
-	AccountID   typeid.TypeID
+	AccountID   id.ID
 	Description str.NullString
 	Name        string
-	ParentGroup com.NullTypeID
+	ParentGroup id.NullID
 }
 
 type DeleteParams struct {
-	AccountID, GroupID typeid.TypeID
+	AccountID, GroupID id.ID
 }
 
 type GetParams struct {
-	AccountID, GroupID typeid.TypeID
+	AccountID, GroupID id.ID
 }
 
 type ListParams struct {
-	endingBeforeDate  sql.NullTime
-	startingAfterDate sql.NullTime
-	AccountID         typeid.TypeID
-	EndingBefore      com.NullTypeID
-	StartingAfter     com.NullTypeID
-	Limit             i32.NullInt32
+	CreatedAtGt   t.NullTime
+	CreatedAtGte  t.NullTime
+	CreatedAtLt   t.NullTime
+	CreatedAtLte  t.NullTime
+	UpdatedAtGt   t.NullTime
+	UpdatedAtGte  t.NullTime
+	UpdatedAtLt   t.NullTime
+	UpdatedAtLte  t.NullTime
+	AccountID     id.ID
+	Description   str.NullString
+	Name          str.NullString
+	EndingBefore  id.NullID
+	StartingAfter id.NullID
+	ParentGroup   id.NullID
+	Limit         i32.NullInt32
 }
 
 type GetByIDsParams struct {
-	AccountID typeid.TypeID
-	IDs       []typeid.TypeID
+	AccountID id.ID
+	IDs       []id.ID
 }
 
 type UpdateParams struct {
-	AccountID, GroupID typeid.TypeID
+	AccountID, GroupID id.ID
 	Description        str.NullString
 	Name               str.NullString
-	ParentGroup        com.NullTypeID
+	ParentGroup        id.NullID
 }

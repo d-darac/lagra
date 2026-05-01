@@ -8,17 +8,17 @@ import (
 	"reflect"
 	"strings"
 
-	"go.jetify.com/typeid/v2"
+	"github.com/d-darac/lagra/pkg/id"
 )
 
 type Resolver interface {
-	Resolve(ctx context.Context, ids []typeid.TypeID, accountID typeid.TypeID) (map[typeid.TypeID]Resource, error)
+	Resolve(ctx context.Context, ids []id.ID, accountID id.ID) (map[id.ID]Resource, error)
 }
 
 type Expandable struct {
 	Resource Resource
 	Name     string
-	ID       NullTypeID
+	ID       id.NullID
 }
 
 type ExpansionConfigs map[string]map[string]ExpansionConfig
@@ -27,7 +27,7 @@ type ExpansionConfig struct {
 	// Function to batch-fetch related resources by their IDs
 	// Returns a Map for O(1) lookups when merging results
 	Resolver Resolver
-	// Resolver func(ctx context.Context, ids []typeid.TypeID) map[typeid.TypeID]any
+	// Resolver func(ctx context.Context, ids []tid.ID) map[tid.ID]any
 	// Whether this field contains an array of IDs (vs single ID)
 	IsArray bool
 }
@@ -134,8 +134,8 @@ func (re ResourceExpander) expandField(
 	currentDepth int,
 ) error {
 	// Collect all IDs that need to be fetched
-	allIDs := make(map[typeid.TypeID]struct{})
-	var accountID typeid.TypeID
+	allIDs := make(map[id.ID]struct{})
+	var accountID id.ID
 
 	for _, resource := range resources {
 		fmt.Println(currentDepth)
@@ -157,7 +157,7 @@ func (re ResourceExpander) expandField(
 			for _, v := range fld.Seq2() {
 				intf := v.Interface()
 				if exp, ok := intf.(Expandable); ok && exp.ID.Valid {
-					allIDs[exp.ID.TypeID] = struct{}{}
+					allIDs[exp.ID.ID] = struct{}{}
 				}
 			}
 			continue
@@ -165,7 +165,7 @@ func (re ResourceExpander) expandField(
 
 		intf := fld.Interface()
 		if exp, ok := intf.(Expandable); ok && exp.ID.Valid {
-			allIDs[exp.ID.TypeID] = struct{}{}
+			allIDs[exp.ID.ID] = struct{}{}
 		}
 	}
 
@@ -173,7 +173,7 @@ func (re ResourceExpander) expandField(
 		return nil
 	}
 
-	allIDsSlice := make([]typeid.TypeID, 0)
+	allIDsSlice := make([]id.ID, 0)
 	for k := range allIDs {
 		allIDsSlice = append(allIDsSlice, k)
 	}
@@ -204,7 +204,7 @@ func (re ResourceExpander) expandField(
 			for i, v := range fld.Seq2() {
 				intfI := i.Interface()
 				intfV := v.Interface()
-				data := relatedData[intfV.(Expandable).ID.TypeID]
+				data := relatedData[intfV.(Expandable).ID.ID]
 				exp := Expandable{
 					ID:       intfV.(Expandable).ID,
 					Resource: data,
@@ -217,7 +217,7 @@ func (re ResourceExpander) expandField(
 		}
 
 		intf := fld.Interface()
-		data := relatedData[intf.(Expandable).ID.TypeID]
+		data := relatedData[intf.(Expandable).ID.ID]
 		exp := Expandable{
 			ID:       intf.(Expandable).ID,
 			Resource: data,

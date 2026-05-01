@@ -8,7 +8,7 @@ import (
 
 type FieldNames map[string]map[string]map[string]string
 
-func FieldNamesFromTags(fieldNames map[string]map[string]map[string]string, key string, s any) {
+func FieldNamesFromTags(fieldNames FieldNames, key string, s any) {
 	rt := reflect.TypeOf(s)
 	if rt.Kind() != reflect.Struct {
 		panic("invalid type; must be struct")
@@ -32,7 +32,7 @@ func FieldNamesFromTags(fieldNames map[string]map[string]map[string]string, key 
 	}
 }
 
-func getByTag(fieldNames map[string]map[string]map[string]string, key, tag string, s any) (string, error) {
+func getByTag(fieldNames FieldNames, key, tag string, s any) (string, error) {
 	rt := reflect.TypeOf(s)
 	if rt.Kind() == reflect.Pointer {
 		rt = rt.Elem()

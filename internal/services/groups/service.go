@@ -2,15 +2,14 @@ package groups
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 
 	"github.com/d-darac/lagra/internal/com"
 	"github.com/d-darac/lagra/internal/database"
 	"github.com/d-darac/lagra/internal/database/sqlc"
 	"github.com/d-darac/lagra/internal/models"
+	"github.com/d-darac/lagra/pkg/id"
 	"github.com/jackc/pgx/v5"
-	"go.jetify.com/typeid/v2"
 )
 
 type Service struct {
@@ -52,7 +51,7 @@ func (s Service) Get(ctx context.Context, params GetParams) (*models.Group, erro
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, &com.ResourceNotFoundErr{
-				ID:       params.GroupID.String(),
+				ID:       params.GroupID.TypeID.String(),
 				Resource: string(com.ResourceGroup),
 			}
 		}
@@ -67,7 +66,7 @@ func (s Service) Get(ctx context.Context, params GetParams) (*models.Group, erro
 	return group, nil
 }
 
-func (s Service) GetByIDs(ctx context.Context, params GetByIDsParams) (map[typeid.TypeID]*models.Group, error) {
+func (s Service) GetByIDs(ctx context.Context, params GetByIDsParams) (map[id.ID]*models.Group, error) {
 	dbParams := mapGetGroupsByIDsParams(params)
 
 	rows, err := s.Q.GetGroupsByIDs(ctx, dbParams)
@@ -81,7 +80,7 @@ func (s Service) GetByIDs(ctx context.Context, params GetByIDsParams) (map[typei
 		return nil, err
 	}
 
-	groups := make(map[typeid.TypeID]*models.Group)
+	groups := make(map[id.ID]*models.Group)
 	for _, row := range rows {
 		group := &models.Group{}
 		if err := group.MapGroupRow(database.GroupRow(row), params.AccountID); err != nil {
@@ -95,9 +94,9 @@ func (s Service) GetByIDs(ctx context.Context, params GetByIDsParams) (map[typei
 
 func (s Service) List(ctx context.Context, params ListParams) (groups []com.Resource, hasMore bool, err error) {
 	if params.StartingAfter.Valid {
-		row, err := s.Get(ctx, GetParams{
+		_, err := s.Get(ctx, GetParams{
 			AccountID: params.AccountID,
-			GroupID:   params.StartingAfter.TypeID,
+			GroupID:   params.StartingAfter.ID,
 		})
 		if err != nil {
 			if rnfe, ok := errors.AsType[*com.ResourceNotFoundErr](err); ok {
@@ -105,13 +104,12 @@ func (s Service) List(ctx context.Context, params ListParams) (groups []com.Reso
 			}
 			return groups, hasMore, err
 		}
-		params.startingAfterDate = sql.NullTime{Time: row.CreatedAt, Valid: true}
 	}
 
 	if params.EndingBefore.Valid {
-		row, err := s.Get(ctx, GetParams{
+		_, err := s.Get(ctx, GetParams{
 			AccountID: params.AccountID,
-			GroupID:   params.EndingBefore.TypeID,
+			GroupID:   params.EndingBefore.ID,
 		})
 		if err != nil {
 			if rnfe, ok := errors.AsType[*com.ResourceNotFoundErr](err); ok {
@@ -119,7 +117,6 @@ func (s Service) List(ctx context.Context, params ListParams) (groups []com.Reso
 			}
 			return groups, hasMore, err
 		}
-		params.endingBeforeDate = sql.NullTime{Time: row.CreatedAt, Valid: true}
 	}
 
 	dbParams := mapListGroupParams(params)

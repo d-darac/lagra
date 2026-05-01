@@ -6,34 +6,34 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/d-darac/lagra/pkg/id"
 	"github.com/google/uuid"
-	"go.jetify.com/typeid/v2"
 )
 
-func GetAccountID(ctx context.Context) typeid.TypeID {
-	accountID, _ := typeid.FromUUID(string(TypeIDPrefixGroup), uuid.MustParse("019da11d-ea27-764f-8294-20dffab572e5").String())
+func GetAccountID(ctx context.Context) id.ID {
+	accountID, _ := id.FromUUID(string(TypeIDPrefixGroup), uuid.MustParse("019da11d-ea27-764f-8294-20dffab572e5").String())
 	return accountID
-	// return ctx.Value(CtxKeyAccountID).(typeid.TypeID)
+	// return ctx.Value(CtxKeyAccountID).(tid.ID)
 }
 
-func GetIDFromPath(r *http.Request) (typeid.TypeID, error) {
+func GetIDFromPath(r *http.Request) (id.ID, error) {
 	pathValue := r.PathValue("id")
-	typeID, err := typeid.Parse(pathValue)
+	ID, err := id.Parse(pathValue)
 	if err != nil {
-		return typeid.TypeID{}, &InvalidIDErr{
+		return ID, &InvalidIDErr{
 			Param: nil,
 			Value: pathValue,
 		}
 	}
-	return typeID, nil
+	return ID, nil
 }
 
-func GetRequestID(ctx context.Context) typeid.TypeID {
-	return ctx.Value(CtxKeyRequestID).(typeid.TypeID)
+func GetRequestID(ctx context.Context) id.ID {
+	return ctx.Value(CtxKeyRequestID).(id.ID)
 }
 
-func GetUserID(ctx context.Context) typeid.TypeID {
-	return ctx.Value(CtxKeyUserID).(typeid.TypeID)
+func GetUserID(ctx context.Context) id.ID {
+	return ctx.Value(CtxKeyUserID).(id.ID)
 }
 
 func JsonDecode(r *http.Request, v any, w http.ResponseWriter) error {

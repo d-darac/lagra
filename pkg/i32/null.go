@@ -27,7 +27,7 @@ func (i *NullInt32) UnmarshalJSON(data []byte) error {
 	return err
 }
 
-func ParsePtr(v *int) NullInt32 {
+func ParseNull(v *int) NullInt32 {
 	nullInt32 := NullInt32{}
 	nullInt32.Valid = v != nil
 	if nullInt32.Valid {

@@ -27,7 +27,7 @@ func (s *NullString) UnmarshalJSON(data []byte) error {
 	return err
 }
 
-func ParsePtr(v *string) NullString {
+func ParseNull(v *string) NullString {
 	nullString := NullString{}
 	nullString.Valid = v != nil
 	if nullString.Valid {

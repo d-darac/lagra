@@ -3,58 +3,77 @@ package groups
 import (
 	"database/sql"
 
-	"github.com/d-darac/lagra/internal/com"
 	"github.com/d-darac/lagra/internal/database/sqlc"
+	"github.com/d-darac/lagra/pkg/id"
 	"github.com/google/uuid"
 )
 
 func mapCreateGroupParams(params CreateParams) (cgp sqlc.CreateGroupParams) {
-	cgp.AccountID = uuid.MustParse(params.AccountID.UUID())
+	cgp.AccountID = uuid.MustParse(params.AccountID.TypeID.UUID())
 	cgp.Description = sql.NullString(params.Description)
 	cgp.Name = params.Name
-	cgp.ParentGroupID = com.ToNullUUID(params.ParentGroup)
+	cgp.ParentGroupID = id.ToNullUUID(params.ParentGroup)
 	return
 }
 
 func mapDeleteGroupParams(params DeleteParams) sqlc.DeleteGroupParams {
 	return sqlc.DeleteGroupParams{
-		AccountID: uuid.MustParse(params.AccountID.UUID()),
-		ID:        uuid.MustParse(params.GroupID.UUID()),
+		AccountID: uuid.MustParse(params.AccountID.TypeID.UUID()),
+		ID:        uuid.MustParse(params.GroupID.TypeID.UUID()),
 	}
 }
 
 func mapGetGroupParams(params GetParams) sqlc.GetGroupParams {
 	return sqlc.GetGroupParams{
-		AccountID: uuid.MustParse(params.AccountID.UUID()),
-		ID:        uuid.MustParse(params.GroupID.UUID()),
+		AccountID: uuid.MustParse(params.AccountID.TypeID.UUID()),
+		ID:        uuid.MustParse(params.GroupID.TypeID.UUID()),
 	}
 }
 
 func mapGetGroupsByIDsParams(params GetByIDsParams) (ggbip sqlc.GetGroupsByIDsParams) {
-	ggbip.AccountID = uuid.MustParse(params.AccountID.UUID())
+	ggbip.AccountID = uuid.MustParse(params.AccountID.TypeID.UUID())
 	uuids := make([]uuid.UUID, len(params.IDs))
 	for i, tid := range params.IDs {
-		uuids[i] = uuid.MustParse(tid.UUID())
+		uuids[i] = uuid.MustParse(tid.TypeID.UUID())
 	}
 	ggbip.IDs = uuids
 	return
 }
 
 func mapListGroupParams(params ListParams) (lgp sqlc.ListGroupsParams) {
-	lgp.AccountID = uuid.MustParse(params.AccountID.UUID())
-	lgp.EndingBefore = com.ToNullUUID(params.EndingBefore)
-	lgp.StartingAfter = com.ToNullUUID(params.StartingAfter)
-	lgp.EndingBeforeDate = params.endingBeforeDate
-	lgp.StartingAfterDate = params.startingAfterDate
-	lgp.Limit = sql.NullInt32(params.Limit)
+	lgp.AccountID = uuid.MustParse(params.AccountID.TypeID.UUID())
+	lgp.Description = sql.NullString(params.Description)
+	lgp.Name = sql.NullString(params.Name)
+	lgp.ParentGroupID = id.ToNullUUID(params.ParentGroup)
+	mapPaginationParams(params, &lgp)
+	mapTimeRangeParams(params, &lgp)
 	return
 }
 
+func mapPaginationParams(params ListParams, lgp *sqlc.ListGroupsParams) {
+	lgp.EndingBefore = id.ToNullUUID(params.EndingBefore)
+	lgp.EndingBeforeDate = sql.NullTime{Time: params.EndingBefore.ID.Time, Valid: params.EndingBefore.Valid}
+	lgp.Limit = sql.NullInt32(params.Limit)
+	lgp.StartingAfter = id.ToNullUUID(params.StartingAfter)
+	lgp.StartingAfterDate = sql.NullTime{Time: params.StartingAfter.ID.Time, Valid: params.StartingAfter.Valid}
+}
+
+func mapTimeRangeParams(params ListParams, lgp *sqlc.ListGroupsParams) {
+	lgp.CreatedAtGt = sql.NullTime(params.CreatedAtGt)
+	lgp.CreatedAtGte = sql.NullTime(params.CreatedAtGte)
+	lgp.CreatedAtLt = sql.NullTime(params.CreatedAtLt)
+	lgp.CreatedAtLte = sql.NullTime(params.CreatedAtLte)
+	lgp.UpdatedAtGt = sql.NullTime(params.UpdatedAtGt)
+	lgp.UpdatedAtGte = sql.NullTime(params.UpdatedAtGte)
+	lgp.UpdatedAtLt = sql.NullTime(params.UpdatedAtLt)
+	lgp.UpdatedAtLte = sql.NullTime(params.UpdatedAtLte)
+}
+
 func mapUpdateGroupParams(params UpdateParams) (ugp sqlc.UpdateGroupParams) {
-	ugp.AccountID = uuid.MustParse(params.AccountID.UUID())
+	ugp.AccountID = uuid.MustParse(params.AccountID.TypeID.UUID())
 	ugp.Description = sql.NullString(params.Description)
 	ugp.Name = sql.NullString(params.Name)
-	ugp.ParentGroupID = com.ToNullUUID(params.ParentGroup)
+	ugp.ParentGroupID = id.ToNullUUID(params.ParentGroup)
 	return
 }
 

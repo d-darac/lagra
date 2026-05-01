@@ -1,7 +1,7 @@
 package com
 
-import "go.jetify.com/typeid/v2"
+import "github.com/d-darac/lagra/pkg/id"
 
 type Resource interface {
-	AccountID() typeid.TypeID
+	AccountID() id.ID
 }
