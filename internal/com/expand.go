@@ -16,9 +16,9 @@ type Resolver interface {
 }
 
 type Expandable struct {
-	ID       NullTypeID
 	Resource Resource
 	Name     string
+	ID       NullTypeID
 }
 
 type ExpansionConfigs map[string]map[string]ExpansionConfig
@@ -34,13 +34,13 @@ type ExpansionConfig struct {
 
 type ResourceExpander struct {
 	config     ExpansionConfigs
-	maxDepth   int
 	fieldNames FieldNames
+	maxDepth   int
 }
 
 type ExpansionNode struct {
-	Field    string
 	Children map[string]ExpansionNode
+	Field    string
 }
 
 func (e Expandable) MarshalJSON() ([]byte, error) {
