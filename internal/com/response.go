@@ -18,9 +18,9 @@ type ErrorListResponse struct {
 }
 
 type ListResponse struct {
+	Url     string `json:"url"`
 	Data    []any  `json:"data"`
 	HasMore bool   `json:"has_more"`
-	Url     string `json:"url"`
 }
 
 func NewListResponse(url string) *ListResponse {
