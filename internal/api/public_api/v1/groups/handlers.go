@@ -150,14 +150,14 @@ func (h Handlers) List(w http.ResponseWriter, r *http.Request) {
 
 	accountID := com.GetAccountID(r.Context())
 
-	reqParams := ListGroupsParams{}
+	reqParams := ListGroupsParams{PaginationParams: &com.PaginationParams{}, CreatedAt: &com.TimeRange{}, UpdatedAt: &com.TimeRange{}}
 	if err := com.JsonDecode(r, &reqParams, w); err != nil {
 		com.RespondError(w, err)
 		return
 	}
 
 	listParams, err := mapListParams(reqParams, accountID)
-	groups, _, err := h.Services.Groups.List(ctx, listParams)
+	groups, hasMore, err := h.Services.Groups.List(ctx, listParams)
 	if err != nil {
 		com.RespondError(w, err)
 		return
@@ -168,7 +168,9 @@ func (h Handlers) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	com.RespondJSON(w, http.StatusOK, groups)
+	res := com.NewListResponse(groups, r.URL.Path, hasMore)
+
+	com.RespondJSON(w, http.StatusOK, res)
 }
 
 func (h Handlers) Update(w http.ResponseWriter, r *http.Request) {

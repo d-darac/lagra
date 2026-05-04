@@ -3,7 +3,7 @@ package com
 type CtxKey string
 type ErrorType string
 type ErrorCode string
-type TypeIDPrefix string
+type IDPrefix string
 type ResourceLabel string
 
 const (
@@ -30,18 +30,18 @@ const (
 )
 
 const (
-	TypeIDPrefixAccount                    TypeIDPrefix = "acc"
-	TypeIDPrefixApiKey                     TypeIDPrefix = "api_key"
-	TypeIDPrefixGroup                      TypeIDPrefix = "grp"
-	TypeIDPrefixInventory                  TypeIDPrefix = "inv"
-	TypeIDPrefixInventoryMovement          TypeIDPrefix = "im"
-	TypeIDPrefixInventoryMovementReference TypeIDPrefix = "im_ref"
-	TypeIDPrefixItem                       TypeIDPrefix = "itm"
-	TypeIDPrefixItemIdentifier             TypeIDPrefix = "itm_idr"
-	TypeIDPrefixItemVariantAttribute       TypeIDPrefix = "iva"
-	TypeIDPrefixItemVariantAttributeOption TypeIDPrefix = "iva_opt"
-	TypeIDPrefixRequest                    TypeIDPrefix = "req"
-	TypeIDPrefixUser                       TypeIDPrefix = "usr"
+	IDPrefixAccount                    IDPrefix = "acc"
+	IDPrefixApiKey                     IDPrefix = "api_key"
+	IDPrefixGroup                      IDPrefix = "grp"
+	IDPrefixInventory                  IDPrefix = "inv"
+	IDPrefixInventoryMovement          IDPrefix = "imv"
+	IDPrefixInventoryMovementReference IDPrefix = "imv_ref"
+	IDPrefixItem                       IDPrefix = "itm"
+	IDPrefixItemIdentifier             IDPrefix = "itm_idf"
+	IDPrefixItemVariantAttribute       IDPrefix = "iva"
+	IDPrefixItemVariantAttributeOption IDPrefix = "iva_opt"
+	IDPrefixRequest                    IDPrefix = "req"
+	IDPrefixUser                       IDPrefix = "usr"
 )
 
 const (

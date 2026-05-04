@@ -18,15 +18,16 @@ type ErrorListResponse struct {
 }
 
 type ListResponse struct {
-	Url     string `json:"url"`
-	Data    []any  `json:"data"`
-	HasMore bool   `json:"has_more"`
+	Url     string     `json:"url"`
+	Data    []Resource `json:"data"`
+	HasMore bool       `json:"has_more"`
 }
 
-func NewListResponse(url string) *ListResponse {
+func NewListResponse(data []Resource, url string, hasMore bool) *ListResponse {
 	return &ListResponse{
-		Data: make([]any, 0),
-		Url:  url,
+		Data:    data,
+		Url:     url,
+		HasMore: hasMore,
 	}
 }
 

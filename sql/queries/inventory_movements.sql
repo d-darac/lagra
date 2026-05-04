@@ -1,6 +1,9 @@
 -- name: CreateInventoryMovement :one
 INSERT INTO inventory_movements
 (
+    id,
+    created_at,
+    updated_at,
     type,     
     account_id,
     inventory_id,
@@ -11,7 +14,10 @@ VALUES
     $1,
     $2,
     $3,
-    $4
+    $4,
+    $5,
+    $6,
+    $7
 )
 RETURNING
     id,
@@ -94,24 +100,12 @@ FROM
     AND 
         (
             sqlc.narg('starting_after')::uuid IS NULL
-            OR 
-            (
-                (
-                    sqlc.narg('starting_after_date')::timestamp,
-                    sqlc.narg('starting_after')::uuid
-                ) > (inventory_movements.created_at, inventory_movements.id)
-            )
+            OR sqlc.narg('starting_after')::uuid > inventory_movements.id
         )
     AND 
         (
             sqlc.narg('ending_before')::uuid IS NULL
-            OR 
-            (
-                (
-                    sqlc.narg('ending_before_date')::timestamp,
-                    sqlc.narg('ending_before')::uuid
-                ) < (inventory_movements.created_at, inventory_movements.id)
-            )
+            OR sqlc.narg('ending_before')::uuid < inventory_movements.id
         )
     AND 
         (
@@ -132,11 +126,11 @@ FROM
     (
         CASE 
             WHEN sqlc.narg('ending_before')::uuid IS NOT NULL 
-            THEN (inventory_movements.created_at, inventory_movements.id)
+            THEN inventory_movements.id
         END
     ) ASC,
-    (inventory_movements.created_at, inventory_movements.id) DESC
+    inventory_movements.id DESC
     LIMIT COALESCE(sqlc.narg('limit')::integer, 10) + 1
 )
-ORDER BY created_at DESC, id DESC;
+ORDER BY id DESC;
 --

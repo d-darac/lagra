@@ -1,6 +1,9 @@
 -- name: CreateUser :one
 INSERT INTO users 
 (
+    id,
+    created_at,
+    updated_at,
     email,
     hashed_password,
     name
@@ -9,7 +12,10 @@ VALUES
 (
     $1,
     $2,
-    $3
+    $3,
+    $4,
+    $5,
+    $6
 )
 RETURNING
     id,
@@ -49,7 +55,7 @@ WHERE email = $1;
 -- name: UpdateUser :one
 UPDATE users
 SET
-    updated_at = NOW(),
+    updated_at = sqlc.arg('updated_at')::timestamp,
     email = COALESCE(sqlc.narg('email'), email),
     hashed_password = COALESCE(sqlc.narg('hashed_password'), hashed_password),
     name = COALESCE(sqlc.narg('name'), name)

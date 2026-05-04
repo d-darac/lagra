@@ -11,7 +11,7 @@ import (
 )
 
 func GetAccountID(ctx context.Context) id.ID {
-	accountID, _ := id.FromUUID(string(TypeIDPrefixGroup), uuid.MustParse("019da11d-ea27-764f-8294-20dffab572e5").String())
+	accountID, _ := id.FromUUID(string(IDPrefixGroup), uuid.MustParse("019de41f-fcc1-770b-8475-ec4d7951de69").String())
 	return accountID
 	// return ctx.Value(CtxKeyAccountID).(tid.ID)
 }

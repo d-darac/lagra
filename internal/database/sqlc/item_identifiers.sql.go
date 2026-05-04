@@ -16,6 +16,9 @@ import (
 const createItemIdentifier = `-- name: CreateItemIdentifier :one
 INSERT INTO item_identifiers 
 (
+    id,
+    created_at,
+    updated_at,
     ean,
     gtin,
     isbn,
@@ -40,7 +43,10 @@ VALUES
     $8,
     $9,
     $10,
-    $11
+    $11,
+    $12,
+    $13,
+    $14
 )
 RETURNING
     id,
@@ -59,6 +65,9 @@ RETURNING
 `
 
 type CreateItemIdentifierParams struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
 	Ean       sql.NullString
 	Gtin      sql.NullString
 	Isbn      sql.NullString
@@ -90,6 +99,9 @@ type CreateItemIdentifierRow struct {
 
 func (q *Queries) CreateItemIdentifier(ctx context.Context, arg CreateItemIdentifierParams) (CreateItemIdentifierRow, error) {
 	row := q.db.QueryRow(ctx, createItemIdentifier,
+		arg.ID,
+		arg.CreatedAt,
+		arg.UpdatedAt,
 		arg.Ean,
 		arg.Gtin,
 		arg.Isbn,
@@ -218,7 +230,7 @@ SELECT
 FROM item_identifiers
 WHERE account_id = $1
     AND id = ANY($2::uuid[])
-ORDER BY created_at DESC, id DESC
+ORDER BY id DESC
 `
 
 type GetItemIdentifiersByIDsParams struct {
@@ -340,53 +352,39 @@ FROM
     AND 
         (
             $10::uuid IS NULL
-            OR 
-            (
-                (
-                    $11::timestamp,
-                    $10::uuid
-                ) > (item_identifiers.created_at, item_identifiers.id)
-            )
+            OR $10::uuid > item_identifiers.id
         )
     AND 
         (
-            $12::uuid IS NULL
-            OR 
-            (
-                (
-                    $13::timestamp,
-                    $12::uuid
-                ) < (item_identifiers.created_at, item_identifiers.id)
-            )
+            $11::uuid IS NULL
+            OR $11::uuid < item_identifiers.id
         )
     ORDER BY 
     (
         CASE 
-            WHEN $12::uuid IS NOT NULL 
-            THEN (item_identifiers.created_at, item_identifiers.id)
+            WHEN $11::uuid IS NOT NULL 
+            THEN item_identifiers.id
         END
     ) ASC,
-    (item_identifiers.created_at, item_identifiers.id) DESC
-    LIMIT COALESCE($14::integer, 10) + 1
+    item_identifiers.id DESC
+    LIMIT COALESCE($12::integer, 10) + 1
 )
-ORDER BY created_at DESC, id DESC
+ORDER BY id DESC
 `
 
 type ListItemIdentifiersParams struct {
-	AccountID         uuid.UUID
-	CreatedAtGt       sql.NullTime
-	CreatedAtLt       sql.NullTime
-	CreatedAtGte      sql.NullTime
-	CreatedAtLte      sql.NullTime
-	UpdatedAtGt       sql.NullTime
-	UpdatedAtLt       sql.NullTime
-	UpdatedAtGte      sql.NullTime
-	UpdatedAtLte      sql.NullTime
-	StartingAfter     uuid.NullUUID
-	StartingAfterDate sql.NullTime
-	EndingBefore      uuid.NullUUID
-	EndingBeforeDate  sql.NullTime
-	Limit             sql.NullInt32
+	AccountID     uuid.UUID
+	CreatedAtGt   sql.NullTime
+	CreatedAtLt   sql.NullTime
+	CreatedAtGte  sql.NullTime
+	CreatedAtLte  sql.NullTime
+	UpdatedAtGt   sql.NullTime
+	UpdatedAtLt   sql.NullTime
+	UpdatedAtGte  sql.NullTime
+	UpdatedAtLte  sql.NullTime
+	StartingAfter uuid.NullUUID
+	EndingBefore  uuid.NullUUID
+	Limit         sql.NullInt32
 }
 
 type ListItemIdentifiersRow struct {
@@ -417,9 +415,7 @@ func (q *Queries) ListItemIdentifiers(ctx context.Context, arg ListItemIdentifie
 		arg.UpdatedAtGte,
 		arg.UpdatedAtLte,
 		arg.StartingAfter,
-		arg.StartingAfterDate,
 		arg.EndingBefore,
-		arg.EndingBeforeDate,
 		arg.Limit,
 	)
 	if err != nil {
@@ -458,17 +454,17 @@ const updateItemIdentifier = `-- name: UpdateItemIdentifier :one
 
 UPDATE item_identifiers
 SET
-    updated_at = NOW(),
-    ean = COALESCE($1, ean),
-    gtin = COALESCE($2, gtin),
-    isbn = COALESCE($3, isbn),
-    jan = COALESCE($4, jan),
-    mpn = COALESCE($5, mpn),
-    nsn = COALESCE($6, nsn),
-    upc = COALESCE($7, upc),
-    qr = COALESCE($8, qr),
-    sku = COALESCE($9, sku)
-WHERE id = $10 AND account_id = $11
+    updated_at = $1::timestamp,
+    ean = COALESCE($2, ean),
+    gtin = COALESCE($3, gtin),
+    isbn = COALESCE($4, isbn),
+    jan = COALESCE($5, jan),
+    mpn = COALESCE($6, mpn),
+    nsn = COALESCE($7, nsn),
+    upc = COALESCE($8, upc),
+    qr = COALESCE($9, qr),
+    sku = COALESCE($10, sku)
+WHERE id = $11 AND account_id = $12
 RETURNING
     id,
     created_at,
@@ -486,6 +482,7 @@ RETURNING
 `
 
 type UpdateItemIdentifierParams struct {
+	UpdatedAt time.Time
 	Ean       sql.NullString
 	Gtin      sql.NullString
 	Isbn      sql.NullString
@@ -517,6 +514,7 @@ type UpdateItemIdentifierRow struct {
 
 func (q *Queries) UpdateItemIdentifier(ctx context.Context, arg UpdateItemIdentifierParams) (UpdateItemIdentifierRow, error) {
 	row := q.db.QueryRow(ctx, updateItemIdentifier,
+		arg.UpdatedAt,
 		arg.Ean,
 		arg.Gtin,
 		arg.Isbn,

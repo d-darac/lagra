@@ -7,6 +7,7 @@ package sqlc
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -14,22 +15,33 @@ import (
 const createAccountUserReference = `-- name: CreateAccountUserReference :exec
 INSERT INTO accounts_users 
 (
+    created_at,
+    updated_at,
     account_id,
     user_id
 )
 VALUES 
 (
     $1,
-    $2
+    $2,
+    $3,
+    $4
 )
 `
 
 type CreateAccountUserReferenceParams struct {
+	CreatedAt time.Time
+	UpdatedAt time.Time
 	AccountID uuid.UUID
 	UserID    uuid.UUID
 }
 
 func (q *Queries) CreateAccountUserReference(ctx context.Context, arg CreateAccountUserReferenceParams) error {
-	_, err := q.db.Exec(ctx, createAccountUserReference, arg.AccountID, arg.UserID)
+	_, err := q.db.Exec(ctx, createAccountUserReference,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+		arg.AccountID,
+		arg.UserID,
+	)
 	return err
 }

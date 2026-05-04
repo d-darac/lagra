@@ -29,6 +29,9 @@ func (r *iteratorForCreateItemVariantAttribute) Next() bool {
 
 func (r iteratorForCreateItemVariantAttribute) Values() ([]interface{}, error) {
 	return []interface{}{
+		r.rows[0].ID,
+		r.rows[0].CreatedAt,
+		r.rows[0].UpdatedAt,
 		r.rows[0].Name,
 		r.rows[0].AccountID,
 		r.rows[0].ItemID,
@@ -40,7 +43,7 @@ func (r iteratorForCreateItemVariantAttribute) Err() error {
 }
 
 func (q *Queries) CreateItemVariantAttribute(ctx context.Context, arg []CreateItemVariantAttributeParams) (int64, error) {
-	return q.db.CopyFrom(ctx, []string{"item_variant_attributes"}, []string{"name", "account_id", "item_id"}, &iteratorForCreateItemVariantAttribute{rows: arg})
+	return q.db.CopyFrom(ctx, []string{"item_variant_attributes"}, []string{"id", "created_at", "updated_at", "name", "account_id", "item_id"}, &iteratorForCreateItemVariantAttribute{rows: arg})
 }
 
 // iteratorForCreateItemVariantAttributeOption implements pgx.CopyFromSource.
@@ -63,6 +66,9 @@ func (r *iteratorForCreateItemVariantAttributeOption) Next() bool {
 
 func (r iteratorForCreateItemVariantAttributeOption) Values() ([]interface{}, error) {
 	return []interface{}{
+		r.rows[0].ID,
+		r.rows[0].CreatedAt,
+		r.rows[0].UpdatedAt,
 		r.rows[0].Name,
 		r.rows[0].AccountID,
 		r.rows[0].ItemVariantAttributeID,
@@ -74,7 +80,7 @@ func (r iteratorForCreateItemVariantAttributeOption) Err() error {
 }
 
 func (q *Queries) CreateItemVariantAttributeOption(ctx context.Context, arg []CreateItemVariantAttributeOptionParams) (int64, error) {
-	return q.db.CopyFrom(ctx, []string{"item_variant_attribute_options"}, []string{"name", "account_id", "item_variant_attribute_id"}, &iteratorForCreateItemVariantAttributeOption{rows: arg})
+	return q.db.CopyFrom(ctx, []string{"item_variant_attribute_options"}, []string{"id", "created_at", "updated_at", "name", "account_id", "item_variant_attribute_id"}, &iteratorForCreateItemVariantAttributeOption{rows: arg})
 }
 
 // iteratorForCreateItemVariants implements pgx.CopyFromSource.

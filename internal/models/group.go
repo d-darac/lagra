@@ -19,58 +19,30 @@ type Group struct {
 	ParentGroup com.Expandable `json:"parent_group"`
 }
 
-func (g Group) AccountID() id.ID { return g.accountID }
+func (i Group) AccountID() id.ID  { return i.accountID }
+func (i Group) ResourceID() id.ID { return i.ID }
 
-func (g *Group) MapGroupRow(row database.GroupRow, accountID id.ID) error {
-	groupID, err := id.FromUUID(string(com.TypeIDPrefixGroup), row.ID.String())
+func (i *Group) MapGroupRow(row database.GroupRow, accountID id.ID) error {
+	groupID, err := id.FromUUID(string(com.IDPrefixGroup), row.ID.String())
 	if err != nil {
 		return err
 	}
-	g.accountID = accountID
-	g.ID = groupID
-	g.CreatedAt = row.CreatedAt
-	g.UpdatedAt = row.UpdatedAt
-	g.Description = str.NullString(row.Description)
-	g.Name = row.Name
-	g.ParentGroup = com.Expandable{
-		ID:   id.FromNullUUID(string(com.TypeIDPrefixGroup), row.ParentGroupID),
+
+	parentGroupID, err := id.FromNullUUID(string(com.IDPrefixGroup), row.ParentGroupID)
+	if err != nil {
+		return err
+	}
+
+	i.accountID = accountID
+	i.ID = groupID
+	i.CreatedAt = row.CreatedAt
+	i.UpdatedAt = row.UpdatedAt
+	i.Description = str.NullString(row.Description)
+	i.Name = row.Name
+	i.ParentGroup = com.Expandable{
+		ID:   parentGroupID,
 		Name: string(com.ResourceGroup),
 	}
+
 	return nil
 }
-
-// func (g *Group) MapCreateGroupRow(row GroupRow) error {
-// 	groupID, err := typeid.FromUUID(string(com.TypeIDPrefixGroup), row.ID.String())
-// 	if err != nil {
-// 		return err
-// 	}
-// 	parentGroupID, err := com.FromNullUUID(string(com.TypeIDPrefixGroup), row.ParentGroupID)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	g.ID = groupID
-// 	g.CreatedAt = row.CreatedAt
-// 	g.UpdatedAt = row.UpdatedAt
-// 	g.Description = str.NullString(row.Description)
-// 	g.Name = row.Name
-// 	g.ParentGroup = parentGroupID
-// 	return nil
-// }
-
-// func (g *Group) MapUpdateGroupRow(row GroupRow) error {
-// 	groupID, err := typeid.FromUUID(string(com.TypeIDPrefixGroup), row.ID.String())
-// 	if err != nil {
-// 		return err
-// 	}
-// 	parentGroupID, err := com.FromNullUUID(string(com.TypeIDPrefixGroup), row.ParentGroupID)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	g.ID = groupID
-// 	g.CreatedAt = row.CreatedAt
-// 	g.UpdatedAt = row.UpdatedAt
-// 	g.Description = str.NullString(row.Description)
-// 	g.Name = row.Name
-// 	g.ParentGroup = parentGroupID
-// 	return nil
-// }

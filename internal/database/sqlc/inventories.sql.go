@@ -16,6 +16,9 @@ import (
 const createInventory = `-- name: CreateInventory :one
 INSERT INTO inventories 
 (
+    id,
+    created_at,
+    updated_at,
     in_stock,
     orderable,
     account_id
@@ -24,7 +27,10 @@ VALUES
 (
     $1,
     $2,
-    $3
+    $3,
+    $4,
+    $5,
+    $6
 )
 RETURNING
     id,
@@ -36,6 +42,9 @@ RETURNING
 `
 
 type CreateInventoryParams struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
 	InStock   int32
 	Orderable sql.NullInt32
 	AccountID uuid.UUID
@@ -51,7 +60,14 @@ type CreateInventoryRow struct {
 }
 
 func (q *Queries) CreateInventory(ctx context.Context, arg CreateInventoryParams) (CreateInventoryRow, error) {
-	row := q.db.QueryRow(ctx, createInventory, arg.InStock, arg.Orderable, arg.AccountID)
+	row := q.db.QueryRow(ctx, createInventory,
+		arg.ID,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+		arg.InStock,
+		arg.Orderable,
+		arg.AccountID,
+	)
 	var i CreateInventoryRow
 	err := row.Scan(
 		&i.ID,
@@ -92,7 +108,7 @@ SELECT
 FROM inventories
 WHERE account_id = $1
     AND id = ANY($2::uuid[])
-ORDER BY created_at DESC, id DESC
+ORDER BY id DESC
 `
 
 type GetInventoriesByIDsParams struct {
@@ -234,125 +250,111 @@ FROM
     AND 
         (
             $10::uuid IS NULL
-            OR 
-            (
-                (
-                    $11::timestamp,
-                    $10::uuid
-                ) > (inventories.created_at, inventories.id)
-            )
+            OR $10::uuid > inventories.id
         )
     AND 
         (
-            $12::uuid IS NULL
-            OR 
-            (
-                (
-                    $13::timestamp,
-                    $12::uuid
-                ) < (inventories.created_at, inventories.id)
-            )
+            $11::uuid IS NULL
+            OR $11::uuid < inventories.id
         )
     AND
         (
+            $12::integer IS NULL 
+            OR inventories.in_stock > $12::integer
+        )
+    AND 
+        (
+            $13::integer IS NULL 
+            OR inventories.in_stock < $13::integer
+        )
+    AND 
+        (
             $14::integer IS NULL 
-            OR inventories.in_stock > $14::integer
+            OR inventories.in_stock >= $14::integer
         )
     AND 
         (
             $15::integer IS NULL 
-            OR inventories.in_stock < $15::integer
+            OR inventories.in_stock <= $15::integer
         )
-    AND 
+    AND
         (
             $16::integer IS NULL 
-            OR inventories.in_stock >= $16::integer
+            OR inventories.orderable > $16::integer
         )
     AND 
         (
             $17::integer IS NULL 
-            OR inventories.in_stock <= $17::integer
+            OR inventories.orderable < $17::integer
         )
-    AND
+    AND 
         (
             $18::integer IS NULL 
-            OR inventories.orderable > $18::integer
+            OR inventories.orderable >= $18::integer
         )
     AND 
         (
             $19::integer IS NULL 
-            OR inventories.orderable < $19::integer
+            OR inventories.orderable <= $19::integer
         )
-    AND 
+    AND
         (
             $20::integer IS NULL 
-            OR inventories.orderable >= $20::integer
+            OR inventories.reserved > $20::integer
         )
     AND 
         (
             $21::integer IS NULL 
-            OR inventories.orderable <= $21::integer
+            OR inventories.reserved < $21::integer
         )
-    AND
+    AND 
         (
             $22::integer IS NULL 
-            OR inventories.reserved > $22::integer
+            OR inventories.reserved >= $22::integer
         )
     AND 
         (
             $23::integer IS NULL 
-            OR inventories.reserved < $23::integer
-        )
-    AND 
-        (
-            $24::integer IS NULL 
-            OR inventories.reserved >= $24::integer
-        )
-    AND 
-        (
-            $25::integer IS NULL 
-            OR inventories.reserved <= $25::integer
+            OR inventories.reserved <= $23::integer
         )
     ORDER BY 
     (
         CASE 
-            WHEN $12::uuid IS NOT NULL 
-            THEN (inventories.created_at, inventories.id)
+            WHEN $11::uuid IS NOT NULL 
+            THEN inventories.id
         END
     ) ASC,
-    (inventories.created_at, inventories.id) DESC
-    LIMIT COALESCE($26::integer, 10) + 1
+    inventories.id DESC
+    LIMIT COALESCE($24::integer, 10) + 1
 )
-ORDER BY created_at DESC, id DESC
+ORDER BY id DESC
 `
 
 type ListInventoriesParams struct {
-	AccountID         uuid.UUID
-	CreatedAtGt       sql.NullTime
-	CreatedAtLt       sql.NullTime
-	CreatedAtGte      sql.NullTime
-	CreatedAtLte      sql.NullTime
-	UpdatedAtGt       sql.NullTime
-	UpdatedAtLt       sql.NullTime
-	UpdatedAtGte      sql.NullTime
-	UpdatedAtLte      sql.NullTime
-	StartingAfter     uuid.NullUUID
-	StartingAfterDate sql.NullTime
-	EndingBefore      uuid.NullUUID
-	EndingBeforeDate  sql.NullTime
-	InStockGt         sql.NullInt32
-	InStockLt         sql.NullInt32
-	InStockGte        sql.NullInt32
-	InStockLte        sql.NullInt32
-	OrderableGt       sql.NullInt32
-	OrderableLt       sql.NullInt32
-	OrderableGte      sql.NullInt32
-	OrderableLte      sql.NullInt32
-	ReservedGt        sql.NullInt32
-	ReservedLt        sql.NullInt32
-	ReservedGte       sql.NullInt32
-	ReservedLte       sql.NullInt32
-	Limit             sql.NullInt32
+	AccountID     uuid.UUID
+	CreatedAtGt   sql.NullTime
+	CreatedAtLt   sql.NullTime
+	CreatedAtGte  sql.NullTime
+	CreatedAtLte  sql.NullTime
+	UpdatedAtGt   sql.NullTime
+	UpdatedAtLt   sql.NullTime
+	UpdatedAtGte  sql.NullTime
+	UpdatedAtLte  sql.NullTime
+	StartingAfter uuid.NullUUID
+	EndingBefore  uuid.NullUUID
+	InStockGt     sql.NullInt32
+	InStockLt     sql.NullInt32
+	InStockGte    sql.NullInt32
+	InStockLte    sql.NullInt32
+	OrderableGt   sql.NullInt32
+	OrderableLt   sql.NullInt32
+	OrderableGte  sql.NullInt32
+	OrderableLte  sql.NullInt32
+	ReservedGt    sql.NullInt32
+	ReservedLt    sql.NullInt32
+	ReservedGte   sql.NullInt32
+	ReservedLte   sql.NullInt32
+	Limit         sql.NullInt32
 }
 
 type ListInventoriesRow struct {
@@ -376,9 +378,7 @@ func (q *Queries) ListInventories(ctx context.Context, arg ListInventoriesParams
 		arg.UpdatedAtGte,
 		arg.UpdatedAtLte,
 		arg.StartingAfter,
-		arg.StartingAfterDate,
 		arg.EndingBefore,
-		arg.EndingBeforeDate,
 		arg.InStockGt,
 		arg.InStockLt,
 		arg.InStockGte,
@@ -422,11 +422,11 @@ const updateInventory = `-- name: UpdateInventory :one
 
 UPDATE inventories
 SET
-    updated_at = NOW(),
-    in_stock = COALESCE($1, in_stock),
-    orderable = COALESCE($2, orderable),
-    reserved = COALESCE($3, reserved)
-WHERE id = $4 AND account_id = $5
+    updated_at = $1::timestamp,
+    in_stock = COALESCE($2, in_stock),
+    orderable = COALESCE($3, orderable),
+    reserved = COALESCE($4, reserved)
+WHERE id = $5 AND account_id = $6
 RETURNING
     id,
     created_at,
@@ -437,6 +437,7 @@ RETURNING
 `
 
 type UpdateInventoryParams struct {
+	UpdatedAt time.Time
 	InStock   sql.NullInt32
 	Orderable sql.NullInt32
 	Reserved  sql.NullInt32
@@ -455,6 +456,7 @@ type UpdateInventoryRow struct {
 
 func (q *Queries) UpdateInventory(ctx context.Context, arg UpdateInventoryParams) (UpdateInventoryRow, error) {
 	row := q.db.QueryRow(ctx, updateInventory,
+		arg.UpdatedAt,
 		arg.InStock,
 		arg.Orderable,
 		arg.Reserved,

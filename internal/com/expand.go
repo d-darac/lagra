@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"reflect"
 	"strings"
 
@@ -138,7 +137,6 @@ func (re ResourceExpander) expandField(
 	var accountID id.ID
 
 	for _, resource := range resources {
-		fmt.Println(currentDepth)
 		accountID = resource.AccountID()
 		rType := reflect.TypeOf(resource)
 		if rType.Kind() != reflect.Pointer {
@@ -153,17 +151,25 @@ func (re ResourceExpander) expandField(
 		}
 
 		fld := rVal.FieldByName(fieldName)
-		if fld.Kind() == reflect.Slice && fieldCfg.IsArray {
-			for _, v := range fld.Seq2() {
-				intf := v.Interface()
-				if exp, ok := intf.(Expandable); ok && exp.ID.Valid {
-					allIDs[exp.ID.ID] = struct{}{}
-				}
+		// if fld.Kind() == reflect.Slice && fieldCfg.IsArray {
+		// 	for _, v := range fld.Seq2() {
+		// 		intf := v.Interface()
+		// 		if exp, ok := intf.(Expandable); ok && exp.ID.Valid {
+		// 			allIDs[exp.ID.ID] = struct{}{}
+		// 		}
+		// 	}
+		// 	continue
+		// }
+
+		intf := fld.Interface()
+
+		if expSlc, ok := intf.([]Expandable); ok && fieldCfg.IsArray {
+			for _, exp := range expSlc {
+				allIDs[exp.ID.ID] = struct{}{}
 			}
 			continue
 		}
 
-		intf := fld.Interface()
 		if exp, ok := intf.(Expandable); ok && exp.ID.Valid {
 			allIDs[exp.ID.ID] = struct{}{}
 		}
@@ -199,31 +205,49 @@ func (re ResourceExpander) expandField(
 		}
 
 		fld := rVal.FieldByName(fieldName)
-		if fld.Kind() == reflect.Slice && fieldCfg.IsArray {
-			newFld := make([]Expandable, fld.Len())
-			for i, v := range fld.Seq2() {
-				intfI := i.Interface()
-				intfV := v.Interface()
-				data := relatedData[intfV.(Expandable).ID.ID]
-				exp := Expandable{
-					ID:       intfV.(Expandable).ID,
+		// if fld.Kind() == reflect.Slice && fieldCfg.IsArray {
+		// 	newFld := make([]Expandable, fld.Len())
+		// 	for i, v := range fld.Seq2() {
+		// 		intfI := i.Interface()
+		// 		intfV := v.Interface()
+		// 		data := relatedData[intfV.(Expandable).ID.ID]
+		// 		exp := Expandable{
+		// 			ID:       intfV.(Expandable).ID,
+		// 			Resource: data,
+		// 			Name:     intfV.(Expandable).Name,
+		// 		}
+		// 		newFld[intfI.(int)] = exp
+		// 	}
+		// 	rVal.FieldByName(fieldName).Set(reflect.ValueOf(newFld))
+		// 	continue
+		// }
+
+		intf := fld.Interface()
+
+		if expSlc, ok := intf.([]Expandable); ok && fieldCfg.IsArray {
+			newSlc := make([]Expandable, len(expSlc))
+			for i, exp := range expSlc {
+				data := relatedData[exp.ID.ID]
+				newExp := Expandable{
+					ID:       intf.(Expandable).ID,
 					Resource: data,
-					Name:     intfV.(Expandable).Name,
+					Name:     intf.(Expandable).Name,
 				}
-				newFld[intfI.(int)] = exp
+				newSlc[i] = newExp
 			}
-			rVal.FieldByName(fieldName).Set(reflect.ValueOf(newFld))
+			rVal.FieldByName(fieldName).Set(reflect.ValueOf(newSlc))
 			continue
 		}
 
-		intf := fld.Interface()
-		data := relatedData[intf.(Expandable).ID.ID]
-		exp := Expandable{
-			ID:       intf.(Expandable).ID,
-			Resource: data,
-			Name:     intf.(Expandable).Name,
+		if exp, ok := intf.(Expandable); ok {
+			data := relatedData[exp.ID.ID]
+			newExp := Expandable{
+				ID:       intf.(Expandable).ID,
+				Resource: data,
+				Name:     intf.(Expandable).Name,
+			}
+			rVal.FieldByName(fieldName).Set(reflect.ValueOf(newExp))
 		}
-		rVal.FieldByName(fieldName).Set(reflect.ValueOf(exp))
 	}
 
 	if len(node.Children) > 0 {
@@ -232,18 +256,28 @@ func (re ResourceExpander) expandField(
 		for _, resource := range resources {
 			rPtr := reflect.ValueOf(resource)
 			rVal := rPtr.Elem()
-			if rVal.Kind() == reflect.Struct {
-				fld := rVal.FieldByName(fieldName)
-				if expSlc, ok := fld.Interface().([]Expandable); ok {
-					resourceName = expSlc[0].Name
-					for _, exp := range expSlc {
-						expandedResources = append(expandedResources, exp.Resource)
+
+			if rVal.Kind() != reflect.Struct {
+				continue
+			}
+
+			fld := rVal.FieldByName(fieldName)
+			intf := fld.Interface()
+
+			if expSlc, ok := intf.([]Expandable); ok && fieldCfg.IsArray {
+				resourceName = expSlc[0].Name
+				for _, exp := range expSlc {
+					if exp.Resource == nil {
+						continue
 					}
-				}
-				if exp, ok := fld.Interface().(Expandable); ok {
 					expandedResources = append(expandedResources, exp.Resource)
-					resourceName = exp.Name
 				}
+				continue
+			}
+
+			if exp, ok := intf.(Expandable); ok && exp.Resource != nil {
+				expandedResources = append(expandedResources, exp.Resource)
+				resourceName = exp.Name
 			}
 		}
 

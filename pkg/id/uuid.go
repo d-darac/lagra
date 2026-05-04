@@ -7,28 +7,28 @@ import (
 	"go.jetify.com/typeid/v2"
 )
 
-func ToUUID(ID ID) uuid.UUID {
-	return uuid.MustParse(ID.TypeID.UUID())
-}
-
 func FromUUID(prefix, uidStr string) (ID, error) {
 	typeid, err := typeid.FromUUID(prefix, uidStr)
 	if err != nil {
 		return ID{}, err
 	}
-	return ID{TypeID: typeid, Time: Time(uuid.MustParse(typeid.UUID()))}, nil
+	return ID{
+		typeID: typeid,
+		time:   Time(uuid.MustParse(typeid.UUID())),
+		uuid:   uuid.MustParse(typeid.UUID()),
+	}, nil
 }
 
-func FromNullUUID(prefix string, nullUUID uuid.NullUUID) NullID {
+func FromNullUUID(prefix string, nullUUID uuid.NullUUID) (NullID, error) {
 	nullID := NullID{Valid: nullUUID.Valid}
 	if nullID.Valid {
-		typeID, _ := typeid.FromUUID(prefix, nullUUID.UUID.String())
-		nullID.ID = ID{
-			TypeID: typeID,
-			Time:   Time(uuid.MustParse(typeID.UUID())),
+		ID, err := FromUUID(prefix, nullUUID.UUID.String())
+		if err != nil {
+			return NullID{}, err
 		}
+		nullID.ID = ID
 	}
-	return nullID
+	return nullID, nil
 }
 
 func ToNullUUID(nullID NullID) uuid.NullUUID {
@@ -36,11 +36,11 @@ func ToNullUUID(nullID NullID) uuid.NullUUID {
 		Valid: nullID.Valid,
 	}
 	if nullUUID.Valid {
-		nullUUID.UUID = uuid.MustParse(nullID.ID.TypeID.UUID())
+		nullUUID.UUID = nullID.ID.UUID()
 	}
 	return nullUUID
 }
 
 func Time(uid uuid.UUID) time.Time {
-	return time.Unix(uid.Time().UnixTime())
+	return time.Unix(uid.Time().UnixTime()).UTC()
 }

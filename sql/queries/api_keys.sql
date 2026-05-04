@@ -1,6 +1,9 @@
 -- name: CreateApiKey :one
 INSERT INTO api_keys
 (
+    id,
+    created_at,
+    updated_at,
     expires_at,
     name,
     note,
@@ -10,6 +13,9 @@ INSERT INTO api_keys
 )
 VALUES
 (
+    sqlc.arg('id'),
+    sqlc.arg('created_at')::timestamp,
+    sqlc.arg('updated_at')::timestamp,
     COALESCE(sqlc.narg('expires_at')::timestamp, NULL),
     sqlc.arg('name'),
     sqlc.arg('note'),
@@ -35,7 +41,7 @@ WHERE id = $1 AND account_id = $1;
 -- name: ExpireApiKey :exec
 UPDATE api_keys
 SET
-    updated_at = NOW(),
+    updated_at = sqlc.arg('updated_at')::timestamp,
     expires_at = sqlc.arg('expires_at')::timestamp
 WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id');
 --
@@ -118,24 +124,12 @@ FROM
     AND 
         (
             sqlc.narg('starting_after')::uuid IS NULL
-            OR 
-            (
-                (
-                    sqlc.narg('starting_after_date')::timestamp,
-                    sqlc.narg('starting_after')::uuid
-                ) > (api_keys.created_at, api_keys.id)
-            )
+            OR sqlc.narg('starting_after')::uuid > api_keys.id
         )
     AND 
         (
             sqlc.narg('ending_before')::uuid IS NULL
-            OR 
-            (
-                (
-                    sqlc.narg('ending_before_date')::timestamp,
-                    sqlc.narg('ending_before')::uuid
-                ) < (api_keys.created_at, api_keys.id)
-            )
+            OR sqlc.narg('ending_before')::uuid < api_keys.id
         )
     AND 
         (
@@ -146,19 +140,19 @@ FROM
     (
         CASE 
             WHEN sqlc.narg('ending_before')::uuid IS NOT NULL 
-            THEN (api_keys.created_at, api_keys.id)
+            THEN api_keys.id
         END
     ) ASC,
-    (api_keys.created_at, api_keys.id) DESC
+    api_keys.id DESC
     LIMIT COALESCE(sqlc.narg('limit')::integer, 10) + 1
 )
-ORDER BY created_at DESC, id DESC;
+ORDER BY id DESC;
 --
 
 -- name: UpdateApiKey :one
 UPDATE api_keys
 SET
-    updated_at = NOW(),
+    updated_at = sqlc.arg('updated_at')::timestamp,
     name = COALESCE(sqlc.narg('name'), name),
     note = COALESCE(sqlc.narg('note'), note)
 WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id')

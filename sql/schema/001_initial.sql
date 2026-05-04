@@ -46,9 +46,9 @@ CREATE TYPE inventory_movement_reference_type AS ENUM ('MANUAL', 'ORDER', 'RETUR
 
 CREATE TABLE users
 (
-    id              UUID PRIMARY KEY DEFAULT uuidv7(),
-    created_at      TIMESTAMP NOT NULL DEFAULT now(),
-    updated_at      TIMESTAMP NOT NULL DEFAULT now(),
+    id              UUID PRIMARY KEY,
+    created_at      TIMESTAMP NOT NULL,
+    updated_at      TIMESTAMP NOT NULL,
     email           TEXT UNIQUE NOT NULL,
     hashed_password TEXT NOT NULL,
     name            TEXT
@@ -56,9 +56,9 @@ CREATE TABLE users
 
 CREATE TABLE accounts
 (
-    id         UUID PRIMARY KEY DEFAULT uuidv7(),
-    created_at TIMESTAMP NOT NULL DEFAULT now(),
-    updated_at TIMESTAMP NOT NULL DEFAULT now(),
+    id         UUID PRIMARY KEY,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
     country    country NOT NULL,
     deleted    BOOLEAN NOT NULL DEFAULT FALSE,
     nickname   TEXT,
@@ -69,16 +69,16 @@ CREATE TABLE accounts_users
 (
     account_id UUID NOT NULL REFERENCES accounts ON DELETE CASCADE,
     user_id    UUID NOT NULL REFERENCES users ON DELETE CASCADE,
-    created_at TIMESTAMP NOT NULL DEFAULT now(),
-    updated_at TIMESTAMP NOT NULL DEFAULT now(),
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
     PRIMARY KEY (account_id, user_id)
 );
 
 CREATE TABLE groups
 (
-    id              UUID PRIMARY KEY DEFAULT uuidv7(),
-    created_at      TIMESTAMP NOT NULL DEFAULT now(),
-    updated_at      TIMESTAMP NOT NULL DEFAULT now(),
+    id              UUID PRIMARY KEY,
+    created_at      TIMESTAMP NOT NULL,
+    updated_at      TIMESTAMP NOT NULL,
     description     TEXT,
     name            TEXT NOT NULL,
     account_id      UUID NOT NULL REFERENCES accounts ON DELETE CASCADE,
@@ -87,9 +87,9 @@ CREATE TABLE groups
 
 CREATE TABLE inventories
 (
-    id         UUID PRIMARY KEY DEFAULT uuidv7(),
-    created_at TIMESTAMP NOT NULL DEFAULT now(),
-    updated_at TIMESTAMP NOT NULL DEFAULT now(),
+    id         UUID PRIMARY KEY,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
     in_stock   INTEGER NOT NULL DEFAULT 0,
     orderable  INTEGER,
     reserved   INTEGER,
@@ -98,9 +98,9 @@ CREATE TABLE inventories
 
 CREATE TABLE items
 (
-    id             UUID PRIMARY KEY DEFAULT uuidv7(),
-    created_at     TIMESTAMP NOT NULL DEFAULT now(),
-    updated_at     TIMESTAMP NOT NULL DEFAULT now(),
+    id             UUID PRIMARY KEY,
+    created_at     TIMESTAMP NOT NULL,
+    updated_at     TIMESTAMP NOT NULL,
     active         BOOLEAN NOT NULL DEFAULT TRUE,
     description    TEXT DEFAULT NULL,
     has_variants   BOOLEAN NOT NULL DEFAULT FALSE,
@@ -117,9 +117,9 @@ CREATE TABLE items
 
 CREATE TABLE item_identifiers
 (
-    id         UUID PRIMARY KEY DEFAULT uuidv7(),
-    created_at TIMESTAMP NOT NULL DEFAULT now(),
-    updated_at TIMESTAMP NOT NULL DEFAULT now(),
+    id         UUID PRIMARY KEY,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
     ean        TEXT CHECK (char_length(ean) = 8 OR (char_length(ean) >= 12 AND char_length(ean) <= 14)),
     gtin       TEXT CHECK (char_length(gtin) = 8 OR (char_length(gtin) >= 12 AND char_length(gtin) <= 14)),
     isbn       TEXT CHECK (char_length(isbn) = 10 OR char_length(isbn) = 13),
@@ -135,9 +135,9 @@ CREATE TABLE item_identifiers
 
 CREATE TABLE item_variant_attributes
 (
-    id         UUID PRIMARY KEY DEFAULT uuidv7(),
-    created_at TIMESTAMP NOT NULL DEFAULT now(),
-    updated_at TIMESTAMP NOT NULL DEFAULT now(),
+    id         UUID PRIMARY KEY,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
     name       TEXT NOT NULL,
     account_id UUID NOT NULL REFERENCES accounts ON DELETE CASCADE,
     item_id    UUID NOT NULL REFERENCES items ON DELETE CASCADE
@@ -145,9 +145,9 @@ CREATE TABLE item_variant_attributes
 
 CREATE TABLE item_variant_attribute_options
 (
-    id                        UUID PRIMARY KEY DEFAULT uuidv7(),
-    created_at                TIMESTAMP NOT NULL DEFAULT now(),
-    updated_at                TIMESTAMP NOT NULL DEFAULT now(),
+    id                        UUID PRIMARY KEY,
+    created_at                TIMESTAMP NOT NULL,
+    updated_at                TIMESTAMP NOT NULL,
     name                      TEXT NOT NULL,
     account_id                UUID NOT NULL REFERENCES accounts ON DELETE CASCADE,
     item_variant_attribute_id UUID NOT NULL REFERENCES item_variant_attributes ON DELETE CASCADE
@@ -155,9 +155,9 @@ CREATE TABLE item_variant_attribute_options
 
 CREATE TABLE inventory_movements
 (
-    id           UUID PRIMARY KEY DEFAULT uuidv7(),
-    created_at   TIMESTAMP NOT NULL DEFAULT now(),
-    updated_at   TIMESTAMP NOT NULL DEFAULT now(),
+    id           UUID PRIMARY KEY,
+    created_at   TIMESTAMP NOT NULL,
+    updated_at   TIMESTAMP NOT NULL,
     quantity     INTEGER NOT NULL,
     type         inventory_movement_type NOT NULL,
     account_id   UUID NOT NULL REFERENCES accounts ON DELETE CASCADE,
@@ -167,9 +167,9 @@ CREATE TABLE inventory_movements
 
 CREATE TABLE inventory_movement_references
 (
-    id                    UUID PRIMARY KEY DEFAULT uuidv7(),
-    created_at            TIMESTAMP NOT NULL DEFAULT now(),
-    updated_at            TIMESTAMP NOT NULL DEFAULT now(),
+    id                    UUID PRIMARY KEY,
+    created_at            TIMESTAMP NOT NULL,
+    updated_at            TIMESTAMP NOT NULL,
     value                 TEXT NOT NULL,
     type                  inventory_movement_reference_type NOT NULL,
     account_id            UUID NOT NULL REFERENCES accounts ON DELETE CASCADE,
@@ -178,9 +178,9 @@ CREATE TABLE inventory_movement_references
 
 CREATE TABLE api_keys
 (
-    id              UUID PRIMARY KEY DEFAULT uuidv7(),
-    created_at      TIMESTAMP NOT NULL DEFAULT now(),
-    updated_at      TIMESTAMP NOT NULL DEFAULT now(),
+    id              UUID PRIMARY KEY,
+    created_at      TIMESTAMP NOT NULL,
+    updated_at      TIMESTAMP NOT NULL,
     expires_at      TIMESTAMP DEFAULT NULL,
     name            TEXT NOT NULL,
     note            TEXT,

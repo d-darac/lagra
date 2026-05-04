@@ -1,6 +1,9 @@
 -- name: CreateGroup :one
 INSERT INTO groups 
 (
+    id,
+    created_at,
+    updated_at,
     description,
     name,
     account_id,
@@ -11,7 +14,10 @@ VALUES
     $1,
     $2,
     $3,
-    $4
+    $4,
+    $5,
+    $6,
+    $7
 )
 RETURNING
     id,
@@ -50,7 +56,7 @@ SELECT
 FROM groups
 WHERE account_id = sqlc.arg('account_id')
     AND id = ANY(sqlc.arg('IDs')::uuid[])
-ORDER BY created_at DESC, id DESC;
+ORDER BY id DESC;
 --
 
 -- name: ListGroups :many
@@ -109,24 +115,12 @@ FROM
     AND 
         (
             sqlc.narg('starting_after')::uuid IS NULL
-            OR 
-            (
-                (
-                    sqlc.narg('starting_after_date')::timestamp,
-                    sqlc.narg('starting_after')::uuid
-                ) > (groups.created_at, groups.id)
-            )
+            OR sqlc.narg('starting_after')::uuid > groups.id
         )
     AND 
         (
             sqlc.narg('ending_before')::uuid IS NULL
-            OR 
-            (
-                (
-                    sqlc.narg('ending_before_date')::timestamp,
-                    sqlc.narg('ending_before')::uuid
-                ) < (groups.created_at, groups.id)
-            )
+            OR sqlc.narg('ending_before')::uuid < groups.id
         )
     AND 
         (
@@ -147,19 +141,19 @@ FROM
     (
         CASE 
             WHEN sqlc.narg('ending_before')::uuid IS NOT NULL 
-            THEN (groups.created_at, groups.id)
+            THEN groups.id
         END
     ) ASC,
-    (groups.created_at, groups.id) DESC
+    groups.id DESC
     LIMIT COALESCE(sqlc.narg('limit')::integer, 10) + 1
 )
-ORDER BY created_at DESC, id DESC;
+ORDER BY id DESC;
 --
 
 -- name: UpdateGroup :one
 UPDATE groups
 SET
-    updated_at = NOW(),
+    updated_at = sqlc.arg('updated_at')::timestamp,
     description = COALESCE(sqlc.narg('description'), description),
     name = COALESCE(sqlc.narg('name'), name),
     parent_group_id = COALESCE(sqlc.narg('parent_group_id'), parent_group_id)

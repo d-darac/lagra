@@ -3,9 +3,6 @@ package id
 import (
 	"bytes"
 	"encoding/json"
-
-	"github.com/google/uuid"
-	"go.jetify.com/typeid/v2"
 )
 
 var jsonNull = []byte("null")
@@ -17,7 +14,7 @@ type NullID struct {
 
 func (id NullID) MarshalJSON() ([]byte, error) {
 	if id.Valid {
-		return json.Marshal(id.ID.TypeID)
+		return json.Marshal(id.ID.TypeID())
 	}
 	return jsonNull, nil
 }
@@ -27,7 +24,7 @@ func (id *NullID) UnmarshalJSON(data []byte) error {
 		*id = NullID{}
 		return nil
 	}
-	err := json.Unmarshal(data, &id.ID.TypeID)
+	err := json.Unmarshal(data, &id.ID.typeID)
 	id.Valid = err == nil
 	return err
 }
@@ -37,14 +34,11 @@ func ParseNull(s *string) (NullID, error) {
 		Valid: s != nil,
 	}
 	if nullID.Valid {
-		typeid, err := typeid.Parse(*s)
+		ID, err := Parse(*s)
 		if err != nil {
 			return nullID, err
 		}
-		nullID.ID = ID{
-			TypeID: typeid,
-			Time:   Time(uuid.MustParse(typeid.UUID())),
-		}
+		nullID.ID = ID
 	}
 	return nullID, nil
 }

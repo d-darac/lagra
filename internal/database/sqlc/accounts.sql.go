@@ -16,17 +16,23 @@ import (
 const createAccount = `-- name: CreateAccount :one
 INSERT INTO accounts 
 (
+    id,
+    created_at,
+    updated_at,
     country,
     deleted,
     nickname,
     owner_id
 )
 VALUES 
-(
+(   
     $1,
-    FALSE,
     $2,
-    $3
+    $3,
+    $4,
+    FALSE,
+    $5,
+    $6
 )
 RETURNING
     id,
@@ -38,9 +44,12 @@ RETURNING
 `
 
 type CreateAccountParams struct {
-	Country  Country
-	Nickname sql.NullString
-	OwnerID  uuid.NullUUID
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Country   Country
+	Nickname  sql.NullString
+	OwnerID   uuid.NullUUID
 }
 
 type CreateAccountRow struct {
@@ -53,7 +62,14 @@ type CreateAccountRow struct {
 }
 
 func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) (CreateAccountRow, error) {
-	row := q.db.QueryRow(ctx, createAccount, arg.Country, arg.Nickname, arg.OwnerID)
+	row := q.db.QueryRow(ctx, createAccount,
+		arg.ID,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+		arg.Country,
+		arg.Nickname,
+		arg.OwnerID,
+	)
 	var i CreateAccountRow
 	err := row.Scan(
 		&i.ID,
@@ -70,18 +86,19 @@ const deleteAccount = `-- name: DeleteAccount :exec
 
 UPDATE accounts
 SET
-    updated_at = NOW(),
+    updated_at = $1,
     deleted = TRUE
-WHERE id = $1 AND owner_id = $2
+WHERE id = $2 AND owner_id = $3
 `
 
 type DeleteAccountParams struct {
-	ID      uuid.UUID
-	OwnerID uuid.NullUUID
+	UpdatedAt time.Time
+	ID        uuid.UUID
+	OwnerID   uuid.NullUUID
 }
 
 func (q *Queries) DeleteAccount(ctx context.Context, arg DeleteAccountParams) error {
-	_, err := q.db.Exec(ctx, deleteAccount, arg.ID, arg.OwnerID)
+	_, err := q.db.Exec(ctx, deleteAccount, arg.UpdatedAt, arg.ID, arg.OwnerID)
 	return err
 }
 
@@ -137,7 +154,7 @@ SELECT
     owner_id
 FROM accounts
 WHERE owner_id = $1
-ORDER BY created_at DESC
+ORDER BY id DESC
 LIMIT COALESCE($2, 10)
 `
 
@@ -195,7 +212,7 @@ FROM accounts
 JOIN accounts_users 
 ON accounts.id = accounts_users.account_id
 WHERE accounts_users.user_id = $1
-ORDER BY accounts.created_at DESC
+ORDER BY accounts.id DESC
 LIMIT COALESCE($2, 10)
 `
 
@@ -244,10 +261,10 @@ const updateAccount = `-- name: UpdateAccount :one
 
 UPDATE accounts
 SET
-    updated_at = NOW(),
-    country = COALESCE($1, country),
-    nickname = COALESCE($2, nickname)
-WHERE id = $3 AND owner_id = $4
+    updated_at = $1,
+    country = COALESCE($2, country),
+    nickname = COALESCE($3, nickname)
+WHERE id = $4 AND owner_id = $5
 RETURNING
     id,
     created_at,
@@ -258,10 +275,11 @@ RETURNING
 `
 
 type UpdateAccountParams struct {
-	Country  NullCountry
-	Nickname sql.NullString
-	ID       uuid.UUID
-	OwnerID  uuid.NullUUID
+	UpdatedAt time.Time
+	Country   NullCountry
+	Nickname  sql.NullString
+	ID        uuid.UUID
+	OwnerID   uuid.NullUUID
 }
 
 type UpdateAccountRow struct {
@@ -275,6 +293,7 @@ type UpdateAccountRow struct {
 
 func (q *Queries) UpdateAccount(ctx context.Context, arg UpdateAccountParams) (UpdateAccountRow, error) {
 	row := q.db.QueryRow(ctx, updateAccount,
+		arg.UpdatedAt,
 		arg.Country,
 		arg.Nickname,
 		arg.ID,

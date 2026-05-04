@@ -16,6 +16,9 @@ import (
 const createInventoryMovementReference = `-- name: CreateInventoryMovementReference :one
 INSERT INTO inventory_movement_references 
 (
+    id,
+    created_at,
+    updated_at,
     type,  
     value,
     account_id,
@@ -26,7 +29,10 @@ VALUES
     $1,
     $2,
     $3,
-    $4
+    $4,
+    $5,
+    $6,
+    $7
 )
 RETURNING
     id,
@@ -39,6 +45,9 @@ RETURNING
 `
 
 type CreateInventoryMovementReferenceParams struct {
+	ID                  uuid.UUID
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 	Type                InventoryMovementReferenceType
 	Value               string
 	AccountID           uuid.UUID
@@ -57,6 +66,9 @@ type CreateInventoryMovementReferenceRow struct {
 
 func (q *Queries) CreateInventoryMovementReference(ctx context.Context, arg CreateInventoryMovementReferenceParams) (CreateInventoryMovementReferenceRow, error) {
 	row := q.db.QueryRow(ctx, createInventoryMovementReference,
+		arg.ID,
+		arg.CreatedAt,
+		arg.UpdatedAt,
 		arg.Type,
 		arg.Value,
 		arg.AccountID,
@@ -186,51 +198,39 @@ FROM
     AND 
         (
             $10::uuid IS NULL
-            OR 
-            (
-                (
-                    $11::timestamp,
-                    $10::uuid
-                ) > (inventory_movement_references.created_at, inventory_movement_references.id)
-            )
+            OR $10::uuid > inventory_movement_references.id
         )
     AND 
         (
-            $12::uuid IS NULL
-            OR 
-            (
-                (
-                    $13::timestamp,
-                    $12::uuid
-                ) < (inventory_movement_references.created_at, inventory_movement_references.id)
-            )
+            $11::uuid IS NULL
+            OR $11::uuid < inventory_movement_references.id
         )
     AND 
         (
-            $14::uuid IS NULL 
-            OR inventory_movement_references.inventory_movement_id = $14::uuid
+            $12::uuid IS NULL 
+            OR inventory_movement_references.inventory_movement_id = $12::uuid
         )
     AND 
         (
-            $15::inventory_movement_reference_type IS NULL 
-            OR inventory_movement_references.type = $15::inventory_movement_reference_type
+            $13::inventory_movement_reference_type IS NULL 
+            OR inventory_movement_references.type = $13::inventory_movement_reference_type
         )
     AND 
         (
-            $16::text IS NULL 
-            OR inventory_movement_references.value ~~* CONCAT('%', $16::text, '%')
+            $14::text IS NULL 
+            OR inventory_movement_references.value ~~* CONCAT('%', $14::text, '%')
         )
     ORDER BY 
     (
         CASE 
-            WHEN $12::uuid IS NOT NULL 
-            THEN (inventory_movement_references.created_at, inventory_movement_references.id)
+            WHEN $11::uuid IS NOT NULL 
+            THEN inventory_movement_references.id
         END
     ) ASC,
     (inventory_movement_references.created_at, inventory_movement_references.id) DESC
-    LIMIT COALESCE($17::integer, 10) + 1
+    LIMIT COALESCE($15::integer, 10) + 1
 )
-ORDER BY created_at DESC, id DESC
+ORDER BY id DESC
 `
 
 type ListInventoryMovementReferencesParams struct {
@@ -244,9 +244,7 @@ type ListInventoryMovementReferencesParams struct {
 	UpdatedAtGte        sql.NullTime
 	UpdatedAtLte        sql.NullTime
 	StartingAfter       uuid.NullUUID
-	StartingAfterDate   sql.NullTime
 	EndingBefore        uuid.NullUUID
-	EndingBeforeDate    sql.NullTime
 	InventoryMovementID uuid.NullUUID
 	Type                NullInventoryMovementReferenceType
 	Value               sql.NullString
@@ -274,9 +272,7 @@ func (q *Queries) ListInventoryMovementReferences(ctx context.Context, arg ListI
 		arg.UpdatedAtGte,
 		arg.UpdatedAtLte,
 		arg.StartingAfter,
-		arg.StartingAfterDate,
 		arg.EndingBefore,
-		arg.EndingBeforeDate,
 		arg.InventoryMovementID,
 		arg.Type,
 		arg.Value,

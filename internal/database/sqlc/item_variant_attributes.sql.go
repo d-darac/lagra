@@ -14,6 +14,9 @@ import (
 )
 
 type CreateItemVariantAttributeParams struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
 	Name      string
 	AccountID uuid.UUID
 	ItemID    uuid.UUID
@@ -129,59 +132,45 @@ FROM
     AND 
         (
             $10::uuid IS NULL
-            OR 
-            (
-                (
-                    $11::timestamp,
-                    $10::uuid
-                ) > (item_variant_attributes.created_at, item_variant_attributes.id)
-            )
+            OR $10::uuid > item_variant_attributes.id
         )
     AND 
         (
-            $12::uuid IS NULL
-            OR 
-            (
-                (
-                    $13::timestamp,
-                    $12::uuid
-                ) < (item_variant_attributes.created_at, item_variant_attributes.id)
-            )
+            $11::uuid IS NULL
+            OR $11::uuid < item_variant_attributes.id
         )
     AND 
         (
-            $14::text IS NULL 
-            OR item_variant_attributes.name ~~* CONCAT('%', $14::text, '%')
+            $12::text IS NULL 
+            OR item_variant_attributes.name ~~* CONCAT('%', $12::text, '%')
         )
     ORDER BY 
     (
         CASE 
-            WHEN $12::uuid IS NOT NULL 
-            THEN (item_variant_attributes.created_at, item_variant_attributes.id)
+            WHEN $11::uuid IS NOT NULL 
+            THEN item_variant_attributes.id
         END
     ) ASC,
-    (item_variant_attributes.created_at, item_variant_attributes.id) DESC
-    LIMIT COALESCE($15::integer, 10) + 1
+    item_variant_attributes.id DESC
+    LIMIT COALESCE($13::integer, 10) + 1
 )
-ORDER BY created_at DESC, id DESC
+ORDER BY id DESC
 `
 
 type ListItemVariantAttributesParams struct {
-	AccountID         uuid.UUID
-	CreatedAtGt       sql.NullTime
-	CreatedAtLt       sql.NullTime
-	CreatedAtGte      sql.NullTime
-	CreatedAtLte      sql.NullTime
-	UpdatedAtGt       sql.NullTime
-	UpdatedAtLt       sql.NullTime
-	UpdatedAtGte      sql.NullTime
-	UpdatedAtLte      sql.NullTime
-	StartingAfter     uuid.NullUUID
-	StartingAfterDate sql.NullTime
-	EndingBefore      uuid.NullUUID
-	EndingBeforeDate  sql.NullTime
-	Name              sql.NullString
-	Limit             sql.NullInt32
+	AccountID     uuid.UUID
+	CreatedAtGt   sql.NullTime
+	CreatedAtLt   sql.NullTime
+	CreatedAtGte  sql.NullTime
+	CreatedAtLte  sql.NullTime
+	UpdatedAtGt   sql.NullTime
+	UpdatedAtLt   sql.NullTime
+	UpdatedAtGte  sql.NullTime
+	UpdatedAtLte  sql.NullTime
+	StartingAfter uuid.NullUUID
+	EndingBefore  uuid.NullUUID
+	Name          sql.NullString
+	Limit         sql.NullInt32
 }
 
 type ListItemVariantAttributesRow struct {
@@ -204,9 +193,7 @@ func (q *Queries) ListItemVariantAttributes(ctx context.Context, arg ListItemVar
 		arg.UpdatedAtGte,
 		arg.UpdatedAtLte,
 		arg.StartingAfter,
-		arg.StartingAfterDate,
 		arg.EndingBefore,
-		arg.EndingBeforeDate,
 		arg.Name,
 		arg.Limit,
 	)
@@ -238,9 +225,9 @@ const updateItemVariantAttribute = `-- name: UpdateItemVariantAttribute :one
 
 UPDATE item_variant_attributes
 SET
-    updated_at = NOW(),
-    name = COALESCE($1, name)
-WHERE id = $2 AND account_id = $3
+    updated_at = $1::timestamp,
+    name = COALESCE($2, name)
+WHERE id = $3 AND account_id = $4
 RETURNING
     id,
     created_at,
@@ -250,6 +237,7 @@ RETURNING
 `
 
 type UpdateItemVariantAttributeParams struct {
+	UpdatedAt time.Time
 	Name      sql.NullString
 	ID        uuid.UUID
 	AccountID uuid.UUID
@@ -264,7 +252,12 @@ type UpdateItemVariantAttributeRow struct {
 }
 
 func (q *Queries) UpdateItemVariantAttribute(ctx context.Context, arg UpdateItemVariantAttributeParams) (UpdateItemVariantAttributeRow, error) {
-	row := q.db.QueryRow(ctx, updateItemVariantAttribute, arg.Name, arg.ID, arg.AccountID)
+	row := q.db.QueryRow(ctx, updateItemVariantAttribute,
+		arg.UpdatedAt,
+		arg.Name,
+		arg.ID,
+		arg.AccountID,
+	)
 	var i UpdateItemVariantAttributeRow
 	err := row.Scan(
 		&i.ID,

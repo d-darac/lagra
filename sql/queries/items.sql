@@ -1,6 +1,9 @@
 -- name: CreateItem :one
 INSERT INTO items 
 (
+    id,
+    created_at,
+    updated_at,
     active,
     description,
     name,
@@ -23,7 +26,10 @@ VALUES
     $7,
     $8,
     $9,
-    $10
+    $10,
+    $11,
+    $12,
+    $13
 )
 RETURNING
     id,
@@ -86,7 +92,7 @@ SELECT
     items.description,
     items.group_id,
     items.has_variants,
-    item_identifiers.id AS item_identifiers_id,
+    item_identifiers.id item_identifiers_id,
     items.inventory_id,
     items.name,
     items.parent_item_id,
@@ -111,36 +117,24 @@ FROM
     AND
         (
             sqlc.narg('starting_after')::uuid IS NULL
-            OR 
-            (
-                (
-                    sqlc.narg('starting_after_date')::timestamp,
-                    sqlc.narg('starting_after')::uuid
-                ) > (items.created_at, items.id)
-            )
+            OR sqlc.narg('starting_after')::uuid > items.id
         )
     AND 
         (
             sqlc.narg('ending_before')::uuid IS NULL
-            OR 
-            (
-                (
-                    sqlc.narg('ending_before_date')::timestamp,
-                    sqlc.narg('ending_before')::uuid
-                ) < (items.created_at, items.id)
-            )
+            OR sqlc.narg('ending_before')::uuid < items.id
         )
     ORDER BY 
     (
         CASE 
             WHEN sqlc.narg('ending_before')::uuid IS NOT NULL 
-            THEN (items.created_at, items.id)
+            THEN items.id
         END
     ) ASC,
-    (items.created_at, items.id) DESC
+    items.id DESC
     LIMIT COALESCE(sqlc.narg('limit')::integer, 10) + 1
 )
-ORDER BY created_at DESC, id DESC;
+ORDER BY id DESC;
 --
 
 -- name: GetItemsByIDs :many
@@ -152,7 +146,7 @@ SELECT
     items.description,
     items.group_id,
     items.has_variants,
-    item_identifiers.id AS item_identifiers_id,
+    item_identifiers.id item_identifiers_id,
     items.inventory_id,
     items.name,
     items.parent_item_id,
@@ -164,7 +158,7 @@ FROM items
 LEFT JOIN item_identifiers ON items.id = item_identifiers.item_id
 WHERE items.account_id = sqlc.arg('account_id')
     AND items.id = ANY(sqlc.arg('IDs')::uuid[])
-ORDER BY items.created_at DESC, items.id DESC;
+ORDER BY items.id DESC;
 --
 
 -- name: ListItems :many
@@ -179,7 +173,7 @@ FROM
         items.description,
         items.group_id,
         items.has_variants,
-        item_identifiers.id AS item_identifiers_id,
+        item_identifiers.id item_identifiers_id,
         items.inventory_id,
         items.name,
         items.parent_item_id,
@@ -233,24 +227,12 @@ FROM
     AND 
         (
             sqlc.narg('starting_after')::uuid IS NULL
-            OR 
-            (
-                (
-                    sqlc.narg('starting_after_date')::timestamp,
-                    sqlc.narg('starting_after')::uuid
-                ) > (items.created_at, items.id)
-            )
+            OR sqlc.narg('starting_after')::uuid > items.id
         )
     AND 
         (
             sqlc.narg('ending_before')::uuid IS NULL
-            OR 
-            (
-                (
-                    sqlc.narg('ending_before_date')::timestamp,
-                    sqlc.narg('ending_before')::uuid
-                ) < (items.created_at, items.id)
-            )
+            OR sqlc.narg('ending_before')::uuid < items.id
         )
     AND
         (
@@ -311,19 +293,19 @@ FROM
     (
         CASE 
             WHEN sqlc.narg('ending_before')::uuid IS NOT NULL 
-            THEN (items.created_at, items.id)
+            THEN items.id
         END
     ) ASC,
-    (items.created_at, items.id) DESC
+    items.id DESC
     LIMIT COALESCE(sqlc.narg('limit')::integer, 10) + 1
 )
-ORDER BY created_at DESC, id DESC;
+ORDER BY id DESC;
 --
 
 -- name: UpdateItem :one
 UPDATE items
 SET
-    updated_at = NOW(),
+    updated_at = sqlc.arg('updated_at')::timestamp,
     active = COALESCE(sqlc.narg('active')::boolean, active),
     description = COALESCE(sqlc.narg('description'), description),
     group_id = COALESCE(sqlc.narg('group_id'), group_id),
@@ -333,7 +315,7 @@ SET
     price_amount = COALESCE(sqlc.narg('price_amount'), price_amount),
     price_currency = COALESCE(sqlc.narg('price_currency'), price_currency)
 FROM
-    items AS i
+    items i
     LEFT JOIN item_identifiers ON i.id = item_identifiers.item_id
 WHERE
     i.id = sqlc.arg('id')
@@ -347,7 +329,7 @@ RETURNING
     items.description,
     items.group_id,
     items.has_variants,
-    item_identifiers.id AS item_identifiers_id,
+    item_identifiers.id item_identifiers_id,
     items.inventory_id,
     items.name,
     items.parent_item_id,

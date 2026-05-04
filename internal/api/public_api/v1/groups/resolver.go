@@ -13,7 +13,7 @@ import (
 func (h Handlers) Resolve(ctx context.Context, ids []id.ID, accountID id.ID) (map[id.ID]com.Resource, error) {
 	groups, err := h.Services.Groups.GetByIDs(ctx, groups.GetByIDsParams{
 		AccountID: accountID,
-		IDs:       ids,
+		GroupIDs:  ids,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

@@ -16,6 +16,9 @@ import (
 const createItem = `-- name: CreateItem :one
 INSERT INTO items 
 (
+    id,
+    created_at,
+    updated_at,
     active,
     description,
     name,
@@ -38,7 +41,10 @@ VALUES
     $7,
     $8,
     $9,
-    $10
+    $10,
+    $11,
+    $12,
+    $13
 )
 RETURNING
     id,
@@ -57,6 +63,9 @@ RETURNING
 `
 
 type CreateItemParams struct {
+	ID            uuid.UUID
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 	Active        bool
 	Description   sql.NullString
 	Name          string
@@ -87,6 +96,9 @@ type CreateItemRow struct {
 
 func (q *Queries) CreateItem(ctx context.Context, arg CreateItemParams) (CreateItemRow, error) {
 	row := q.db.QueryRow(ctx, createItem,
+		arg.ID,
+		arg.CreatedAt,
+		arg.UpdatedAt,
 		arg.Active,
 		arg.Description,
 		arg.Name,
@@ -157,7 +169,7 @@ SELECT
     items.description,
     items.group_id,
     items.has_variants,
-    item_identifiers.id AS item_identifiers_id,
+    item_identifiers.id item_identifiers_id,
     items.inventory_id,
     items.name,
     items.parent_item_id,
@@ -226,7 +238,7 @@ SELECT
     items.description,
     items.group_id,
     items.has_variants,
-    item_identifiers.id AS item_identifiers_id,
+    item_identifiers.id item_identifiers_id,
     items.inventory_id,
     items.name,
     items.parent_item_id,
@@ -238,7 +250,7 @@ FROM items
 LEFT JOIN item_identifiers ON items.id = item_identifiers.item_id
 WHERE items.account_id = $1
     AND items.id = ANY($2::uuid[])
-ORDER BY items.created_at DESC, items.id DESC
+ORDER BY items.id DESC
 `
 
 type GetItemsByIDsParams struct {
@@ -313,46 +325,32 @@ FROM
     AND
         (
             $3::uuid IS NULL
-            OR 
-            (
-                (
-                    $4::timestamp,
-                    $3::uuid
-                ) > (items.created_at, items.id)
-            )
+            OR $3::uuid > items.id
         )
     AND 
         (
-            $5::uuid IS NULL
-            OR 
-            (
-                (
-                    $6::timestamp,
-                    $5::uuid
-                ) < (items.created_at, items.id)
-            )
+            $4::uuid IS NULL
+            OR $4::uuid < items.id
         )
     ORDER BY 
     (
         CASE 
-            WHEN $5::uuid IS NOT NULL 
-            THEN (items.created_at, items.id)
+            WHEN $4::uuid IS NOT NULL 
+            THEN items.id
         END
     ) ASC,
-    (items.created_at, items.id) DESC
-    LIMIT COALESCE($7::integer, 10) + 1
+    items.id DESC
+    LIMIT COALESCE($5::integer, 10) + 1
 )
-ORDER BY created_at DESC, id DESC
+ORDER BY id DESC
 `
 
 type ListItemIDsByInventoryParams struct {
-	AccountID         uuid.UUID
-	InventoryID       uuid.UUID
-	StartingAfter     uuid.NullUUID
-	StartingAfterDate sql.NullTime
-	EndingBefore      uuid.NullUUID
-	EndingBeforeDate  sql.NullTime
-	Limit             sql.NullInt32
+	AccountID     uuid.UUID
+	InventoryID   uuid.UUID
+	StartingAfter uuid.NullUUID
+	EndingBefore  uuid.NullUUID
+	Limit         sql.NullInt32
 }
 
 func (q *Queries) ListItemIDsByInventory(ctx context.Context, arg ListItemIDsByInventoryParams) ([]uuid.UUID, error) {
@@ -360,9 +358,7 @@ func (q *Queries) ListItemIDsByInventory(ctx context.Context, arg ListItemIDsByI
 		arg.AccountID,
 		arg.InventoryID,
 		arg.StartingAfter,
-		arg.StartingAfterDate,
 		arg.EndingBefore,
-		arg.EndingBeforeDate,
 		arg.Limit,
 	)
 	if err != nil {
@@ -396,7 +392,7 @@ FROM
         items.description,
         items.group_id,
         items.has_variants,
-        item_identifiers.id AS item_identifiers_id,
+        item_identifiers.id item_identifiers_id,
         items.inventory_id,
         items.name,
         items.parent_item_id,
@@ -450,119 +446,105 @@ FROM
     AND 
         (
             $10::uuid IS NULL
-            OR 
-            (
-                (
-                    $11::timestamp,
-                    $10::uuid
-                ) > (items.created_at, items.id)
-            )
+            OR $10::uuid > items.id
         )
     AND 
         (
-            $12::uuid IS NULL
-            OR 
-            (
-                (
-                    $13::timestamp,
-                    $12::uuid
-                ) < (items.created_at, items.id)
-            )
+            $11::uuid IS NULL
+            OR $11::uuid < items.id
         )
     AND
         (
-            $14::boolean IS NULL
-            OR items.active = $14::boolean
+            $12::boolean IS NULL
+            OR items.active = $12::boolean
         )
     AND 
         (
-            $15::text IS NULL 
-            OR items.description ~~* CONCAT('%', $15::text, '%')
+            $13::text IS NULL 
+            OR items.description ~~* CONCAT('%', $13::text, '%')
+        )
+    AND 
+        (
+            $14::uuid IS NULL 
+            OR items.group_id = $14::uuid
+        )
+    AND
+        (
+            $15::boolean IS NULL 
+            OR items.has_variants = $15::boolean
         )
     AND 
         (
             $16::uuid IS NULL 
-            OR items.group_id = $16::uuid
+            OR items.inventory_id = $16::uuid
         )
-    AND
+    AND 
         (
-            $17::boolean IS NULL 
-            OR items.has_variants = $17::boolean
+            $17::text IS NULL 
+            OR items.name ~~* CONCAT('%', $17::text, '%')
         )
     AND 
         (
             $18::uuid IS NULL 
-            OR items.inventory_id = $18::uuid
+            OR items.parent_item_id = $18::uuid
         )
     AND 
         (
-            $19::text IS NULL 
-            OR items.name ~~* CONCAT('%', $19::text, '%')
+            $19::integer IS NULL 
+            OR items.price_amount = $19::integer
         )
     AND 
         (
-            $20::uuid IS NULL 
-            OR items.parent_item_id = $20::uuid
-        )
-    AND 
-        (
-            $21::integer IS NULL 
-            OR items.price_amount = $21::integer
-        )
-    AND 
-        (
-            $22::currency IS NULL 
-            OR items.price_currency = $22::currency
+            $20::currency IS NULL 
+            OR items.price_currency = $20::currency
         )
     AND
         (
-            $23::item_type IS NULL 
-            OR items.type = $23::item_type
+            $21::item_type IS NULL 
+            OR items.type = $21::item_type
         )
     AND
         (
-            $24::boolean IS NULL 
-            OR items.variant = $24::boolean
+            $22::boolean IS NULL 
+            OR items.variant = $22::boolean
         )
     ORDER BY 
     (
         CASE 
-            WHEN $12::uuid IS NOT NULL 
-            THEN (items.created_at, items.id)
+            WHEN $11::uuid IS NOT NULL 
+            THEN items.id
         END
     ) ASC,
-    (items.created_at, items.id) DESC
-    LIMIT COALESCE($25::integer, 10) + 1
+    items.id DESC
+    LIMIT COALESCE($23::integer, 10) + 1
 )
-ORDER BY created_at DESC, id DESC
+ORDER BY id DESC
 `
 
 type ListItemsParams struct {
-	AccountID         uuid.UUID
-	CreatedAtGt       sql.NullTime
-	CreatedAtLt       sql.NullTime
-	CreatedAtGte      sql.NullTime
-	CreatedAtLte      sql.NullTime
-	UpdatedAtGt       sql.NullTime
-	UpdatedAtLt       sql.NullTime
-	UpdatedAtGte      sql.NullTime
-	UpdatedAtLte      sql.NullTime
-	StartingAfter     uuid.NullUUID
-	StartingAfterDate sql.NullTime
-	EndingBefore      uuid.NullUUID
-	EndingBeforeDate  sql.NullTime
-	Active            sql.NullBool
-	Description       sql.NullString
-	GroupID           uuid.NullUUID
-	HasVariants       sql.NullBool
-	InventoryID       uuid.NullUUID
-	Name              sql.NullString
-	ParentItemID      uuid.NullUUID
-	PriceAmount       sql.NullInt32
-	PriceCurrency     NullCurrency
-	Type              NullItemType
-	Variant           sql.NullBool
-	Limit             sql.NullInt32
+	AccountID     uuid.UUID
+	CreatedAtGt   sql.NullTime
+	CreatedAtLt   sql.NullTime
+	CreatedAtGte  sql.NullTime
+	CreatedAtLte  sql.NullTime
+	UpdatedAtGt   sql.NullTime
+	UpdatedAtLt   sql.NullTime
+	UpdatedAtGte  sql.NullTime
+	UpdatedAtLte  sql.NullTime
+	StartingAfter uuid.NullUUID
+	EndingBefore  uuid.NullUUID
+	Active        sql.NullBool
+	Description   sql.NullString
+	GroupID       uuid.NullUUID
+	HasVariants   sql.NullBool
+	InventoryID   uuid.NullUUID
+	Name          sql.NullString
+	ParentItemID  uuid.NullUUID
+	PriceAmount   sql.NullInt32
+	PriceCurrency NullCurrency
+	Type          NullItemType
+	Variant       sql.NullBool
+	Limit         sql.NullInt32
 }
 
 type ListItemsRow struct {
@@ -595,9 +577,7 @@ func (q *Queries) ListItems(ctx context.Context, arg ListItemsParams) ([]ListIte
 		arg.UpdatedAtGte,
 		arg.UpdatedAtLte,
 		arg.StartingAfter,
-		arg.StartingAfterDate,
 		arg.EndingBefore,
-		arg.EndingBeforeDate,
 		arg.Active,
 		arg.Description,
 		arg.GroupID,
@@ -649,21 +629,21 @@ const updateItem = `-- name: UpdateItem :one
 
 UPDATE items
 SET
-    updated_at = NOW(),
-    active = COALESCE($1::boolean, active),
-    description = COALESCE($2, description),
-    group_id = COALESCE($3, group_id),
-    has_variants = COALESCE($4, has_variants),
-    inventory_id = COALESCE($5, inventory_id),
-    name = COALESCE($6, name),
-    price_amount = COALESCE($7, price_amount),
-    price_currency = COALESCE($8, price_currency)
+    updated_at = $1::timestamp,
+    active = COALESCE($2::boolean, active),
+    description = COALESCE($3, description),
+    group_id = COALESCE($4, group_id),
+    has_variants = COALESCE($5, has_variants),
+    inventory_id = COALESCE($6, inventory_id),
+    name = COALESCE($7, name),
+    price_amount = COALESCE($8, price_amount),
+    price_currency = COALESCE($9, price_currency)
 FROM
-    items AS i
+    items i
     LEFT JOIN item_identifiers ON i.id = item_identifiers.item_id
 WHERE
-    i.id = $9
-    AND i.account_id = $10
+    i.id = $10
+    AND i.account_id = $11
     AND i.id = items.id
 RETURNING
     items.id,
@@ -673,7 +653,7 @@ RETURNING
     items.description,
     items.group_id,
     items.has_variants,
-    item_identifiers.id AS item_identifiers_id,
+    item_identifiers.id item_identifiers_id,
     items.inventory_id,
     items.name,
     items.parent_item_id,
@@ -684,6 +664,7 @@ RETURNING
 `
 
 type UpdateItemParams struct {
+	UpdatedAt     time.Time
 	Active        sql.NullBool
 	Description   sql.NullString
 	GroupID       uuid.NullUUID
@@ -704,7 +685,7 @@ type UpdateItemRow struct {
 	Description       sql.NullString
 	GroupID           uuid.NullUUID
 	HasVariants       bool
-	ItemIdentifiersID uuid.UUID
+	ItemIdentifiersID uuid.NullUUID
 	InventoryID       uuid.NullUUID
 	Name              string
 	ParentItemID      uuid.NullUUID
@@ -716,6 +697,7 @@ type UpdateItemRow struct {
 
 func (q *Queries) UpdateItem(ctx context.Context, arg UpdateItemParams) (UpdateItemRow, error) {
 	row := q.db.QueryRow(ctx, updateItem,
+		arg.UpdatedAt,
 		arg.Active,
 		arg.Description,
 		arg.GroupID,

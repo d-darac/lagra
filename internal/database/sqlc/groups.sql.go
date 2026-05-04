@@ -16,6 +16,9 @@ import (
 const createGroup = `-- name: CreateGroup :one
 INSERT INTO groups 
 (
+    id,
+    created_at,
+    updated_at,
     description,
     name,
     account_id,
@@ -26,7 +29,10 @@ VALUES
     $1,
     $2,
     $3,
-    $4
+    $4,
+    $5,
+    $6,
+    $7
 )
 RETURNING
     id,
@@ -38,6 +44,9 @@ RETURNING
 `
 
 type CreateGroupParams struct {
+	ID            uuid.UUID
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 	Description   sql.NullString
 	Name          string
 	AccountID     uuid.UUID
@@ -55,6 +64,9 @@ type CreateGroupRow struct {
 
 func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) (CreateGroupRow, error) {
 	row := q.db.QueryRow(ctx, createGroup,
+		arg.ID,
+		arg.CreatedAt,
+		arg.UpdatedAt,
 		arg.Description,
 		arg.Name,
 		arg.AccountID,
@@ -141,7 +153,7 @@ SELECT
 FROM groups
 WHERE account_id = $1
     AND id = ANY($2::uuid[])
-ORDER BY created_at DESC, id DESC
+ORDER BY id DESC
 `
 
 type GetGroupsByIDsParams struct {
@@ -242,71 +254,57 @@ FROM
     AND 
         (
             $10::uuid IS NULL
-            OR 
-            (
-                (
-                    $11::timestamp,
-                    $10::uuid
-                ) > (groups.created_at, groups.id)
-            )
+            OR $10::uuid > groups.id
         )
     AND 
         (
-            $12::uuid IS NULL
-            OR 
-            (
-                (
-                    $13::timestamp,
-                    $12::uuid
-                ) < (groups.created_at, groups.id)
-            )
+            $11::uuid IS NULL
+            OR $11::uuid < groups.id
         )
     AND 
         (
-            $14::text IS NULL 
-            OR groups.description ~~* CONCAT('%', $14::text, '%')
+            $12::text IS NULL 
+            OR groups.description ~~* CONCAT('%', $12::text, '%')
         )
     AND 
         (
-            $15::text IS NULL 
-            OR groups.name ~~* CONCAT('%', $15::text, '%')
+            $13::text IS NULL 
+            OR groups.name ~~* CONCAT('%', $13::text, '%')
         )
     AND 
         (
-            $16::uuid IS NULL 
-            OR groups.parent_group_id = $16::uuid
+            $14::uuid IS NULL 
+            OR groups.parent_group_id = $14::uuid
         )
     ORDER BY 
     (
         CASE 
-            WHEN $12::uuid IS NOT NULL 
-            THEN (groups.created_at, groups.id)
+            WHEN $11::uuid IS NOT NULL 
+            THEN groups.id
         END
     ) ASC,
-    (groups.created_at, groups.id) DESC
-    LIMIT COALESCE($17::integer, 10) + 1
+    groups.id DESC
+    LIMIT COALESCE($15::integer, 10) + 1
 )
-ORDER BY created_at DESC, id DESC
+ORDER BY id DESC
 `
 
 type ListGroupsParams struct {
-	AccountID         uuid.UUID
-	CreatedAtGt       sql.NullTime
-	CreatedAtLt       sql.NullTime
-	CreatedAtGte      sql.NullTime
-	CreatedAtLte      sql.NullTime
-	UpdatedAtGt       sql.NullTime
-	UpdatedAtLt       sql.NullTime
-	UpdatedAtGte      sql.NullTime
-	UpdatedAtLte      sql.NullTime
-	StartingAfter     uuid.NullUUID
-	StartingAfterDate sql.NullTime
-	EndingBefore      uuid.NullUUID
-	EndingBeforeDate  sql.NullTime
-	Description       sql.NullString
-	Name              sql.NullString
-	ParentGroupID     uuid.NullUUID
-	Limit             sql.NullInt32
+	AccountID     uuid.UUID
+	CreatedAtGt   sql.NullTime
+	CreatedAtLt   sql.NullTime
+	CreatedAtGte  sql.NullTime
+	CreatedAtLte  sql.NullTime
+	UpdatedAtGt   sql.NullTime
+	UpdatedAtLt   sql.NullTime
+	UpdatedAtGte  sql.NullTime
+	UpdatedAtLte  sql.NullTime
+	StartingAfter uuid.NullUUID
+	EndingBefore  uuid.NullUUID
+	Description   sql.NullString
+	Name          sql.NullString
+	ParentGroupID uuid.NullUUID
+	Limit         sql.NullInt32
 }
 
 type ListGroupsRow struct {
@@ -330,9 +328,7 @@ func (q *Queries) ListGroups(ctx context.Context, arg ListGroupsParams) ([]ListG
 		arg.UpdatedAtGte,
 		arg.UpdatedAtLte,
 		arg.StartingAfter,
-		arg.StartingAfterDate,
 		arg.EndingBefore,
-		arg.EndingBeforeDate,
 		arg.Description,
 		arg.Name,
 		arg.ParentGroupID,
@@ -367,11 +363,11 @@ const updateGroup = `-- name: UpdateGroup :one
 
 UPDATE groups
 SET
-    updated_at = NOW(),
-    description = COALESCE($1, description),
-    name = COALESCE($2, name),
-    parent_group_id = COALESCE($3, parent_group_id)
-WHERE id = $4 AND account_id = $5
+    updated_at = $1::timestamp,
+    description = COALESCE($2, description),
+    name = COALESCE($3, name),
+    parent_group_id = COALESCE($4, parent_group_id)
+WHERE id = $5 AND account_id = $6
 RETURNING
     id,
     created_at,
@@ -382,6 +378,7 @@ RETURNING
 `
 
 type UpdateGroupParams struct {
+	UpdatedAt     time.Time
 	Description   sql.NullString
 	Name          sql.NullString
 	ParentGroupID uuid.NullUUID
@@ -400,6 +397,7 @@ type UpdateGroupRow struct {
 
 func (q *Queries) UpdateGroup(ctx context.Context, arg UpdateGroupParams) (UpdateGroupRow, error) {
 	row := q.db.QueryRow(ctx, updateGroup,
+		arg.UpdatedAt,
 		arg.Description,
 		arg.Name,
 		arg.ParentGroupID,

@@ -1,6 +1,9 @@
 -- name: CreateInventory :one
 INSERT INTO inventories 
 (
+    id,
+    created_at,
+    updated_at,
     in_stock,
     orderable,
     account_id
@@ -9,7 +12,10 @@ VALUES
 (
     $1,
     $2,
-    $3
+    $3,
+    $4,
+    $5,
+    $6
 )
 RETURNING
     id,
@@ -48,7 +54,7 @@ SELECT
 FROM inventories
 WHERE account_id = sqlc.arg('account_id')
     AND id = ANY(sqlc.arg('IDs')::uuid[])
-ORDER BY created_at DESC, id DESC;
+ORDER BY id DESC;
 --
 
 -- name: ListInventories :many
@@ -107,24 +113,12 @@ FROM
     AND 
         (
             sqlc.narg('starting_after')::uuid IS NULL
-            OR 
-            (
-                (
-                    sqlc.narg('starting_after_date')::timestamp,
-                    sqlc.narg('starting_after')::uuid
-                ) > (inventories.created_at, inventories.id)
-            )
+            OR sqlc.narg('starting_after')::uuid > inventories.id
         )
     AND 
         (
             sqlc.narg('ending_before')::uuid IS NULL
-            OR 
-            (
-                (
-                    sqlc.narg('ending_before_date')::timestamp,
-                    sqlc.narg('ending_before')::uuid
-                ) < (inventories.created_at, inventories.id)
-            )
+            OR sqlc.narg('ending_before')::uuid < inventories.id
         )
     AND
         (
@@ -190,19 +184,19 @@ FROM
     (
         CASE 
             WHEN sqlc.narg('ending_before')::uuid IS NOT NULL 
-            THEN (inventories.created_at, inventories.id)
+            THEN inventories.id
         END
     ) ASC,
-    (inventories.created_at, inventories.id) DESC
+    inventories.id DESC
     LIMIT COALESCE(sqlc.narg('limit')::integer, 10) + 1
 )
-ORDER BY created_at DESC, id DESC;
+ORDER BY id DESC;
 --
 
 -- name: UpdateInventory :one
 UPDATE inventories
 SET
-    updated_at = NOW(),
+    updated_at = sqlc.arg('updated_at')::timestamp,
     in_stock = COALESCE(sqlc.narg('in_stock'), in_stock),
     orderable = COALESCE(sqlc.narg('orderable'), orderable),
     reserved = COALESCE(sqlc.narg('reserved'), reserved)

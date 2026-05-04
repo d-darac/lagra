@@ -1,6 +1,9 @@
 -- name: CreateItemVariantAttribute :copyfrom
 INSERT INTO item_variant_attributes
 (
+    id,
+    created_at,
+    updated_at,
     name,
     account_id,
     item_id
@@ -9,7 +12,10 @@ VALUES
 (
     $1,
     $2,
-    $3
+    $3,
+    $4,
+    $5,
+    $6
 );
 --
 
@@ -84,24 +90,12 @@ FROM
     AND 
         (
             sqlc.narg('starting_after')::uuid IS NULL
-            OR 
-            (
-                (
-                    sqlc.narg('starting_after_date')::timestamp,
-                    sqlc.narg('starting_after')::uuid
-                ) > (item_variant_attributes.created_at, item_variant_attributes.id)
-            )
+            OR sqlc.narg('starting_after')::uuid > item_variant_attributes.id
         )
     AND 
         (
             sqlc.narg('ending_before')::uuid IS NULL
-            OR 
-            (
-                (
-                    sqlc.narg('ending_before_date')::timestamp,
-                    sqlc.narg('ending_before')::uuid
-                ) < (item_variant_attributes.created_at, item_variant_attributes.id)
-            )
+            OR sqlc.narg('ending_before')::uuid < item_variant_attributes.id
         )
     AND 
         (
@@ -112,19 +106,19 @@ FROM
     (
         CASE 
             WHEN sqlc.narg('ending_before')::uuid IS NOT NULL 
-            THEN (item_variant_attributes.created_at, item_variant_attributes.id)
+            THEN item_variant_attributes.id
         END
     ) ASC,
-    (item_variant_attributes.created_at, item_variant_attributes.id) DESC
+    item_variant_attributes.id DESC
     LIMIT COALESCE(sqlc.narg('limit')::integer, 10) + 1
 )
-ORDER BY created_at DESC, id DESC;
+ORDER BY id DESC;
 --
 
 -- name: UpdateItemVariantAttribute :one
 UPDATE item_variant_attributes
 SET
-    updated_at = NOW(),
+    updated_at = sqlc.arg('updated_at')::timestamp,
     name = COALESCE(sqlc.narg('name'), name)
 WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id')
 RETURNING

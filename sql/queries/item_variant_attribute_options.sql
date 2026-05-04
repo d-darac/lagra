@@ -1,6 +1,9 @@
 -- name: CreateItemVariantAttributeOption :copyfrom
 INSERT INTO item_variant_attribute_options
 (
+    id,
+    created_at,
+    updated_at,
     name,
     account_id,
     item_variant_attribute_id
@@ -9,7 +12,10 @@ VALUES
 (
     $1,
     $2,
-    $3
+    $3,
+    $4,
+    $5,
+    $6
 );
 --
 
@@ -84,24 +90,12 @@ FROM
     AND 
         (
             sqlc.narg('starting_after')::uuid IS NULL
-            OR 
-            (
-                (
-                    sqlc.narg('starting_after_date')::timestamp,
-                    sqlc.narg('starting_after')::uuid
-                ) > (item_variant_attribute_options.created_at, item_variant_attribute_options.id)
-            )
+            OR sqlc.narg('starting_after')::uuid > item_variant_attribute_options.id
         )
     AND 
         (
             sqlc.narg('ending_before')::uuid IS NULL
-            OR 
-            (
-                (
-                    sqlc.narg('ending_before_date')::timestamp,
-                    sqlc.narg('ending_before')::uuid
-                ) < (item_variant_attribute_options.created_at, item_variant_attribute_options.id)
-            )
+            OR sqlc.narg('ending_before')::uuid < item_variant_attribute_options.id
         )
     AND 
         (
@@ -112,19 +106,19 @@ FROM
     (
         CASE 
             WHEN sqlc.narg('ending_before')::uuid IS NOT NULL 
-            THEN (item_variant_attribute_options.created_at, item_variant_attribute_options.id)
+            THEN item_variant_attribute_options.id
         END
     ) ASC,
-    (item_variant_attribute_options.created_at, item_variant_attribute_options.id) DESC
+    item_variant_attribute_options.id DESC
     LIMIT COALESCE(sqlc.narg('limit')::integer, 10) + 1
 )
-ORDER BY created_at DESC, id DESC;
+ORDER BY id DESC;
 --
 
 -- name: UpdateItemVariantAttributeOption :one
 UPDATE item_variant_attribute_options
 SET
-    updated_at = NOW(),
+    updated_at = sqlc.arg('updated_at')::timestamp,
     name = COALESCE(sqlc.narg('name'), name)
 WHERE id = sqlc.arg('id') AND account_id = sqlc.arg('account_id')
 RETURNING

@@ -8,102 +8,72 @@ import (
 	"github.com/google/uuid"
 )
 
-func mapCreateGroupParams(params CreateParams) (cgp sqlc.CreateGroupParams) {
-	cgp.AccountID = uuid.MustParse(params.AccountID.TypeID.UUID())
-	cgp.Description = sql.NullString(params.Description)
-	cgp.Name = params.Name
-	cgp.ParentGroupID = id.ToNullUUID(params.ParentGroup)
+func mapCreateGroupParams(params CreateParams) (dbParams sqlc.CreateGroupParams) {
+	dbParams.AccountID = params.AccountID.UUID()
+	dbParams.CreatedAt = params.CreatedAt
+	dbParams.Description = sql.NullString(params.Description)
+	dbParams.ID = params.GroupID.UUID()
+	dbParams.Name = params.Name
+	dbParams.ParentGroupID = id.ToNullUUID(params.ParentGroup)
+	dbParams.UpdatedAt = params.UpdatedAt
 	return
 }
 
 func mapDeleteGroupParams(params DeleteParams) sqlc.DeleteGroupParams {
 	return sqlc.DeleteGroupParams{
-		AccountID: uuid.MustParse(params.AccountID.TypeID.UUID()),
-		ID:        uuid.MustParse(params.GroupID.TypeID.UUID()),
+		AccountID: params.AccountID.UUID(),
+		ID:        params.GroupID.UUID(),
 	}
 }
 
 func mapGetGroupParams(params GetParams) sqlc.GetGroupParams {
 	return sqlc.GetGroupParams{
-		AccountID: uuid.MustParse(params.AccountID.TypeID.UUID()),
-		ID:        uuid.MustParse(params.GroupID.TypeID.UUID()),
+		AccountID: params.AccountID.UUID(),
+		ID:        params.GroupID.UUID(),
 	}
 }
 
-func mapGetGroupsByIDsParams(params GetByIDsParams) (ggbip sqlc.GetGroupsByIDsParams) {
-	ggbip.AccountID = uuid.MustParse(params.AccountID.TypeID.UUID())
-	uuids := make([]uuid.UUID, len(params.IDs))
-	for i, tid := range params.IDs {
-		uuids[i] = uuid.MustParse(tid.TypeID.UUID())
+func mapGetGroupsByIDsParams(params GetByIDsParams) (dbParams sqlc.GetGroupsByIDsParams) {
+	dbParams.AccountID = params.AccountID.UUID()
+	uuids := make([]uuid.UUID, len(params.GroupIDs))
+	for i, ID := range params.GroupIDs {
+		uuids[i] = ID.UUID()
 	}
-	ggbip.IDs = uuids
+	dbParams.IDs = uuids
 	return
 }
 
-func mapListGroupParams(params ListParams) (lgp sqlc.ListGroupsParams) {
-	lgp.AccountID = uuid.MustParse(params.AccountID.TypeID.UUID())
-	lgp.Description = sql.NullString(params.Description)
-	lgp.Name = sql.NullString(params.Name)
-	lgp.ParentGroupID = id.ToNullUUID(params.ParentGroup)
-	mapPaginationParams(params, &lgp)
-	mapTimeRangeParams(params, &lgp)
+func mapListGroupParams(params ListParams) (dbParams sqlc.ListGroupsParams) {
+	dbParams.AccountID = params.AccountID.UUID()
+	dbParams.Description = sql.NullString(params.Description)
+	dbParams.Name = sql.NullString(params.Name)
+	dbParams.ParentGroupID = id.ToNullUUID(params.ParentGroup)
+	mapPaginationParams(params, &dbParams)
+	mapTimeRangeParams(params, &dbParams)
 	return
 }
 
-func mapPaginationParams(params ListParams, lgp *sqlc.ListGroupsParams) {
-	lgp.EndingBefore = id.ToNullUUID(params.EndingBefore)
-	lgp.EndingBeforeDate = sql.NullTime{Time: params.EndingBefore.ID.Time, Valid: params.EndingBefore.Valid}
-	lgp.Limit = sql.NullInt32(params.Limit)
-	lgp.StartingAfter = id.ToNullUUID(params.StartingAfter)
-	lgp.StartingAfterDate = sql.NullTime{Time: params.StartingAfter.ID.Time, Valid: params.StartingAfter.Valid}
+func mapPaginationParams(params ListParams, dbParams *sqlc.ListGroupsParams) {
+	dbParams.EndingBefore = id.ToNullUUID(params.EndingBefore)
+	dbParams.Limit = sql.NullInt32(params.Limit)
+	dbParams.StartingAfter = id.ToNullUUID(params.StartingAfter)
 }
 
-func mapTimeRangeParams(params ListParams, lgp *sqlc.ListGroupsParams) {
-	lgp.CreatedAtGt = sql.NullTime(params.CreatedAtGt)
-	lgp.CreatedAtGte = sql.NullTime(params.CreatedAtGte)
-	lgp.CreatedAtLt = sql.NullTime(params.CreatedAtLt)
-	lgp.CreatedAtLte = sql.NullTime(params.CreatedAtLte)
-	lgp.UpdatedAtGt = sql.NullTime(params.UpdatedAtGt)
-	lgp.UpdatedAtGte = sql.NullTime(params.UpdatedAtGte)
-	lgp.UpdatedAtLt = sql.NullTime(params.UpdatedAtLt)
-	lgp.UpdatedAtLte = sql.NullTime(params.UpdatedAtLte)
+func mapTimeRangeParams(params ListParams, dbParams *sqlc.ListGroupsParams) {
+	dbParams.CreatedAtGt = sql.NullTime(params.CreatedAtGt)
+	dbParams.CreatedAtGte = sql.NullTime(params.CreatedAtGte)
+	dbParams.CreatedAtLt = sql.NullTime(params.CreatedAtLt)
+	dbParams.CreatedAtLte = sql.NullTime(params.CreatedAtLte)
+	dbParams.UpdatedAtGt = sql.NullTime(params.UpdatedAtGt)
+	dbParams.UpdatedAtGte = sql.NullTime(params.UpdatedAtGte)
+	dbParams.UpdatedAtLt = sql.NullTime(params.UpdatedAtLt)
+	dbParams.UpdatedAtLte = sql.NullTime(params.UpdatedAtLte)
 }
 
-func mapUpdateGroupParams(params UpdateParams) (ugp sqlc.UpdateGroupParams) {
-	ugp.AccountID = uuid.MustParse(params.AccountID.TypeID.UUID())
-	ugp.Description = sql.NullString(params.Description)
-	ugp.Name = sql.NullString(params.Name)
-	ugp.ParentGroupID = id.ToNullUUID(params.ParentGroup)
+func mapUpdateGroupParams(params UpdateParams) (dbParams sqlc.UpdateGroupParams) {
+	dbParams.AccountID = params.AccountID.UUID()
+	dbParams.Description = sql.NullString(params.Description)
+	dbParams.Name = sql.NullString(params.Name)
+	dbParams.ParentGroupID = id.ToNullUUID(params.ParentGroup)
 	return
 }
-
-// func mapListGroupsParams(params ListGroupsParams, accountID typeid.TypeID) (sqlc.ListGroupsParams, error) {
-// 	var lgp sqlc.ListGroupsParams
-// 	parentGroupID, err := com.FromStringPtr(params.ParentGroup)
-// 	if err != nil {
-// 		return lgp, err
-// 	}
-// 	lgp.AccountID = uuid.MustParse(accountID.UUID())
-// 	lgp.Name = sql.NullString(str.ParsePtr(params.Name))
-// 	lgp.ParentGroupID = com.ToNullUUID(parentGroupID)
-// 	lgp.Description = sql.NullString(str.ParsePtr(params.Description))
-
-// 	// MapTimeRange(list.RequestParams.CreatedAt, &lgp.CreatedAtGt, &lgp.CreatedAtGte, &lgp.CreatedAtLt, &lgp.CreatedAtLte)
-// 	// MapTimeRange(list.RequestParams.UpdatedAt, &lgp.UpdatedAtGt, &lgp.UpdatedAtGte, &lgp.UpdatedAtLt, &lgp.UpdatedAtLte)
-// 	// MapPaginationParams(*list.RequestParams.PaginationParams, &lgp)
-// 	return lgp, nil
-// }
-
-// func mapUpdateGroupParams(params UpdateGroupParams, id, accountID typeid.TypeID) (sqlc.UpdateGroupParams, error) {
-// 	var ugp sqlc.UpdateGroupParams
-// 	parentGroupID, err := com.FromStringPtr(params.ParentGroup)
-// 	if err != nil {
-// 		return ugp, err
-// 	}
-// 	ugp.ID = uuid.MustParse(id.UUID())
-// 	ugp.AccountID = uuid.MustParse(accountID.UUID())
-// 	ugp.Name = sql.NullString(str.ParsePtr(params.Name))
-// 	ugp.ParentGroupID = com.ToNullUUID(parentGroupID)
-// 	ugp.Description = sql.NullString(str.ParsePtr(params.Description))
-// 	return ugp, nil
-// }

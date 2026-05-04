@@ -16,6 +16,9 @@ import (
 const createApiKey = `-- name: CreateApiKey :one
 INSERT INTO api_keys
 (
+    id,
+    created_at,
+    updated_at,
     expires_at,
     name,
     note,
@@ -25,12 +28,15 @@ INSERT INTO api_keys
 )
 VALUES
 (
-    COALESCE($1::timestamp, NULL),
-    $2,
-    $3,
-    $4,
+    $1,
+    $2::timestamp,
+    $3::timestamp,
+    COALESCE($4::timestamp, NULL),
     $5,
-    $6
+    $6,
+    $7,
+    $8,
+    $9
 )
 RETURNING
     id,
@@ -43,6 +49,9 @@ RETURNING
 `
 
 type CreateApiKeyParams struct {
+	ID             uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 	ExpiresAt      sql.NullTime
 	Name           string
 	Note           sql.NullString
@@ -63,6 +72,9 @@ type CreateApiKeyRow struct {
 
 func (q *Queries) CreateApiKey(ctx context.Context, arg CreateApiKeyParams) (CreateApiKeyRow, error) {
 	row := q.db.QueryRow(ctx, createApiKey,
+		arg.ID,
+		arg.CreatedAt,
+		arg.UpdatedAt,
 		arg.ExpiresAt,
 		arg.Name,
 		arg.Note,
@@ -98,19 +110,25 @@ const expireApiKey = `-- name: ExpireApiKey :exec
 
 UPDATE api_keys
 SET
-    updated_at = NOW(),
-    expires_at = $1::timestamp
-WHERE id = $2 AND account_id = $3
+    updated_at = $1::timestamp,
+    expires_at = $2::timestamp
+WHERE id = $3 AND account_id = $4
 `
 
 type ExpireApiKeyParams struct {
+	UpdatedAt time.Time
 	ExpiresAt time.Time
 	ID        uuid.UUID
 	AccountID uuid.UUID
 }
 
 func (q *Queries) ExpireApiKey(ctx context.Context, arg ExpireApiKeyParams) error {
-	_, err := q.db.Exec(ctx, expireApiKey, arg.ExpiresAt, arg.ID, arg.AccountID)
+	_, err := q.db.Exec(ctx, expireApiKey,
+		arg.UpdatedAt,
+		arg.ExpiresAt,
+		arg.ID,
+		arg.AccountID,
+	)
 	return err
 }
 
@@ -237,59 +255,45 @@ FROM
     AND 
         (
             $10::uuid IS NULL
-            OR 
-            (
-                (
-                    $11::timestamp,
-                    $10::uuid
-                ) > (api_keys.created_at, api_keys.id)
-            )
+            OR $10::uuid > api_keys.id
         )
     AND 
         (
-            $12::uuid IS NULL
-            OR 
-            (
-                (
-                    $13::timestamp,
-                    $12::uuid
-                ) < (api_keys.created_at, api_keys.id)
-            )
+            $11::uuid IS NULL
+            OR $11::uuid < api_keys.id
         )
     AND 
         (
-            $14::text IS NULL 
-            OR api_keys.name ~~* CONCAT('%', $14::text, '%')
+            $12::text IS NULL 
+            OR api_keys.name ~~* CONCAT('%', $12::text, '%')
         )
     ORDER BY 
     (
         CASE 
-            WHEN $12::uuid IS NOT NULL 
-            THEN (api_keys.created_at, api_keys.id)
+            WHEN $11::uuid IS NOT NULL 
+            THEN api_keys.id
         END
     ) ASC,
-    (api_keys.created_at, api_keys.id) DESC
-    LIMIT COALESCE($15::integer, 10) + 1
+    api_keys.id DESC
+    LIMIT COALESCE($13::integer, 10) + 1
 )
-ORDER BY created_at DESC, id DESC
+ORDER BY id DESC
 `
 
 type ListApiKeysParams struct {
-	AccountID         uuid.UUID
-	CreatedAtGt       sql.NullTime
-	CreatedAtLt       sql.NullTime
-	CreatedAtGte      sql.NullTime
-	CreatedAtLte      sql.NullTime
-	UpdatedAtGt       sql.NullTime
-	UpdatedAtLt       sql.NullTime
-	UpdatedAtGte      sql.NullTime
-	UpdatedAtLte      sql.NullTime
-	StartingAfter     uuid.NullUUID
-	StartingAfterDate sql.NullTime
-	EndingBefore      uuid.NullUUID
-	EndingBeforeDate  sql.NullTime
-	Name              sql.NullString
-	Limit             sql.NullInt32
+	AccountID     uuid.UUID
+	CreatedAtGt   sql.NullTime
+	CreatedAtLt   sql.NullTime
+	CreatedAtGte  sql.NullTime
+	CreatedAtLte  sql.NullTime
+	UpdatedAtGt   sql.NullTime
+	UpdatedAtLt   sql.NullTime
+	UpdatedAtGte  sql.NullTime
+	UpdatedAtLte  sql.NullTime
+	StartingAfter uuid.NullUUID
+	EndingBefore  uuid.NullUUID
+	Name          sql.NullString
+	Limit         sql.NullInt32
 }
 
 type ListApiKeysRow struct {
@@ -314,9 +318,7 @@ func (q *Queries) ListApiKeys(ctx context.Context, arg ListApiKeysParams) ([]Lis
 		arg.UpdatedAtGte,
 		arg.UpdatedAtLte,
 		arg.StartingAfter,
-		arg.StartingAfterDate,
 		arg.EndingBefore,
-		arg.EndingBeforeDate,
 		arg.Name,
 		arg.Limit,
 	)
@@ -350,10 +352,10 @@ const updateApiKey = `-- name: UpdateApiKey :one
 
 UPDATE api_keys
 SET
-    updated_at = NOW(),
-    name = COALESCE($1, name),
-    note = COALESCE($2, note)
-WHERE id = $3 AND account_id = $4
+    updated_at = $1::timestamp,
+    name = COALESCE($2, name),
+    note = COALESCE($3, note)
+WHERE id = $4 AND account_id = $5
 RETURNING
     id,
     created_at,
@@ -365,6 +367,7 @@ RETURNING
 `
 
 type UpdateApiKeyParams struct {
+	UpdatedAt time.Time
 	Name      sql.NullString
 	Note      sql.NullString
 	ID        uuid.UUID
@@ -383,6 +386,7 @@ type UpdateApiKeyRow struct {
 
 func (q *Queries) UpdateApiKey(ctx context.Context, arg UpdateApiKeyParams) (UpdateApiKeyRow, error) {
 	row := q.db.QueryRow(ctx, updateApiKey,
+		arg.UpdatedAt,
 		arg.Name,
 		arg.Note,
 		arg.ID,

@@ -51,7 +51,7 @@ func (s Service) Get(ctx context.Context, params GetParams) (*models.Group, erro
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, &com.ResourceNotFoundErr{
-				ID:       params.GroupID.TypeID.String(),
+				ID:       params.GroupID.String(),
 				Resource: string(com.ResourceGroup),
 			}
 		}

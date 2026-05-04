@@ -11,7 +11,7 @@ type FieldNames map[string]map[string]map[string]string
 func FieldNamesFromTags(fieldNames FieldNames, key string, s any) {
 	rt := reflect.TypeOf(s)
 	if rt.Kind() != reflect.Struct {
-		panic("invalid type; must be struct")
+		panic("[com.fields] invalid type; must be struct")
 	}
 
 	rtName := rt.Name()
@@ -34,11 +34,14 @@ func FieldNamesFromTags(fieldNames FieldNames, key string, s any) {
 
 func getByTag(fieldNames FieldNames, key, tag string, s any) (string, error) {
 	rt := reflect.TypeOf(s)
+	if rt == nil {
+		return "", fmt.Errorf("[com.fields] s must not be nil")
+	}
 	if rt.Kind() == reflect.Pointer {
 		rt = rt.Elem()
 	}
 	if rt.Kind() != reflect.Struct {
-		return "", fmt.Errorf("invalid type %T; must be a struct", s)
+		return "", fmt.Errorf("[com.fields] invalid type %T; must be a struct", s)
 	}
 	return fieldNames[rt.Name()][key][tag], nil
 }

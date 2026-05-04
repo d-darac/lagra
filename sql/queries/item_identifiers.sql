@@ -1,6 +1,9 @@
 -- name: CreateItemIdentifier :one
 INSERT INTO item_identifiers 
 (
+    id,
+    created_at,
+    updated_at,
     ean,
     gtin,
     isbn,
@@ -25,7 +28,10 @@ VALUES
     $8,
     $9,
     $10,
-    $11
+    $11,
+    $12,
+    $13,
+    $14
 )
 RETURNING
     id,
@@ -85,7 +91,7 @@ SELECT
 FROM item_identifiers
 WHERE account_id = sqlc.arg('account_id')
     AND id = ANY(sqlc.arg('IDs')::uuid[])
-ORDER BY created_at DESC, id DESC;
+ORDER BY id DESC;
 --
 
 -- name: ListItemIdentifiers :many
@@ -151,42 +157,30 @@ FROM
     AND 
         (
             sqlc.narg('starting_after')::uuid IS NULL
-            OR 
-            (
-                (
-                    sqlc.narg('starting_after_date')::timestamp,
-                    sqlc.narg('starting_after')::uuid
-                ) > (item_identifiers.created_at, item_identifiers.id)
-            )
+            OR sqlc.narg('starting_after')::uuid > item_identifiers.id
         )
     AND 
         (
             sqlc.narg('ending_before')::uuid IS NULL
-            OR 
-            (
-                (
-                    sqlc.narg('ending_before_date')::timestamp,
-                    sqlc.narg('ending_before')::uuid
-                ) < (item_identifiers.created_at, item_identifiers.id)
-            )
+            OR sqlc.narg('ending_before')::uuid < item_identifiers.id
         )
     ORDER BY 
     (
         CASE 
             WHEN sqlc.narg('ending_before')::uuid IS NOT NULL 
-            THEN (item_identifiers.created_at, item_identifiers.id)
+            THEN item_identifiers.id
         END
     ) ASC,
-    (item_identifiers.created_at, item_identifiers.id) DESC
+    item_identifiers.id DESC
     LIMIT COALESCE(sqlc.narg('limit')::integer, 10) + 1
 )
-ORDER BY created_at DESC, id DESC;
+ORDER BY id DESC;
 --
 
 -- name: UpdateItemIdentifier :one
 UPDATE item_identifiers
 SET
-    updated_at = NOW(),
+    updated_at = sqlc.arg('updated_at')::timestamp,
     ean = COALESCE(sqlc.narg('ean'), ean),
     gtin = COALESCE(sqlc.narg('gtin'), gtin),
     isbn = COALESCE(sqlc.narg('isbn'), isbn),

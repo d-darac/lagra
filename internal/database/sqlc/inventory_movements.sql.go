@@ -16,6 +16,9 @@ import (
 const createInventoryMovement = `-- name: CreateInventoryMovement :one
 INSERT INTO inventory_movements
 (
+    id,
+    created_at,
+    updated_at,
     type,     
     account_id,
     inventory_id,
@@ -26,7 +29,10 @@ VALUES
     $1,
     $2,
     $3,
-    $4
+    $4,
+    $5,
+    $6,
+    $7
 )
 RETURNING
     id,
@@ -38,6 +44,9 @@ RETURNING
 `
 
 type CreateInventoryMovementParams struct {
+	ID          uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 	Type        InventoryMovementType
 	AccountID   uuid.UUID
 	InventoryID uuid.UUID
@@ -55,6 +64,9 @@ type CreateInventoryMovementRow struct {
 
 func (q *Queries) CreateInventoryMovement(ctx context.Context, arg CreateInventoryMovementParams) (CreateInventoryMovementRow, error) {
 	row := q.db.QueryRow(ctx, createInventoryMovement,
+		arg.ID,
+		arg.CreatedAt,
+		arg.UpdatedAt,
 		arg.Type,
 		arg.AccountID,
 		arg.InventoryID,
@@ -176,71 +188,57 @@ FROM
     AND 
         (
             $10::uuid IS NULL
-            OR 
-            (
-                (
-                    $11::timestamp,
-                    $10::uuid
-                ) > (inventory_movements.created_at, inventory_movements.id)
-            )
+            OR $10::uuid > inventory_movements.id
         )
     AND 
         (
-            $12::uuid IS NULL
-            OR 
-            (
-                (
-                    $13::timestamp,
-                    $12::uuid
-                ) < (inventory_movements.created_at, inventory_movements.id)
-            )
+            $11::uuid IS NULL
+            OR $11::uuid < inventory_movements.id
         )
     AND 
         (
-            $14::uuid IS NULL 
-            OR inventory_movements.item_id = $14::uuid
+            $12::uuid IS NULL 
+            OR inventory_movements.item_id = $12::uuid
         )
     AND 
         (
-            $15::uuid IS NULL 
-            OR inventory_movements.inventory_id = $15::uuid
+            $13::uuid IS NULL 
+            OR inventory_movements.inventory_id = $13::uuid
         )
     AND 
         (
-            $16::inventory_movement_type IS NULL 
-            OR inventory_movements.type = $16::inventory_movement_type
+            $14::inventory_movement_type IS NULL 
+            OR inventory_movements.type = $14::inventory_movement_type
         )
     ORDER BY 
     (
         CASE 
-            WHEN $12::uuid IS NOT NULL 
-            THEN (inventory_movements.created_at, inventory_movements.id)
+            WHEN $11::uuid IS NOT NULL 
+            THEN inventory_movements.id
         END
     ) ASC,
-    (inventory_movements.created_at, inventory_movements.id) DESC
-    LIMIT COALESCE($17::integer, 10) + 1
+    inventory_movements.id DESC
+    LIMIT COALESCE($15::integer, 10) + 1
 )
-ORDER BY created_at DESC, id DESC
+ORDER BY id DESC
 `
 
 type ListInventoryMovementsParams struct {
-	AccountID         uuid.UUID
-	CreatedAtGt       sql.NullTime
-	CreatedAtLt       sql.NullTime
-	CreatedAtGte      sql.NullTime
-	CreatedAtLte      sql.NullTime
-	UpdatedAtGt       sql.NullTime
-	UpdatedAtLt       sql.NullTime
-	UpdatedAtGte      sql.NullTime
-	UpdatedAtLte      sql.NullTime
-	StartingAfter     uuid.NullUUID
-	StartingAfterDate sql.NullTime
-	EndingBefore      uuid.NullUUID
-	EndingBeforeDate  sql.NullTime
-	ItemID            uuid.NullUUID
-	InventoryID       uuid.NullUUID
-	Type              NullInventoryMovementType
-	Limit             sql.NullInt32
+	AccountID     uuid.UUID
+	CreatedAtGt   sql.NullTime
+	CreatedAtLt   sql.NullTime
+	CreatedAtGte  sql.NullTime
+	CreatedAtLte  sql.NullTime
+	UpdatedAtGt   sql.NullTime
+	UpdatedAtLt   sql.NullTime
+	UpdatedAtGte  sql.NullTime
+	UpdatedAtLte  sql.NullTime
+	StartingAfter uuid.NullUUID
+	EndingBefore  uuid.NullUUID
+	ItemID        uuid.NullUUID
+	InventoryID   uuid.NullUUID
+	Type          NullInventoryMovementType
+	Limit         sql.NullInt32
 }
 
 type ListInventoryMovementsRow struct {
@@ -265,9 +263,7 @@ func (q *Queries) ListInventoryMovements(ctx context.Context, arg ListInventoryM
 		arg.UpdatedAtGte,
 		arg.UpdatedAtLte,
 		arg.StartingAfter,
-		arg.StartingAfterDate,
 		arg.EndingBefore,
-		arg.EndingBeforeDate,
 		arg.ItemID,
 		arg.InventoryID,
 		arg.Type,

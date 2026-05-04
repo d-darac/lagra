@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/d-darac/lagra/internal/api/public_api/v1/groups"
+	"github.com/d-darac/lagra/internal/api/public_api/v1/items"
 	"github.com/d-darac/lagra/internal/com"
 	"github.com/d-darac/lagra/internal/database"
 	"github.com/d-darac/lagra/internal/models"
@@ -14,6 +15,7 @@ var ExpansionConfigs = make(com.ExpansionConfigs)
 
 type publicapi struct {
 	groups groups.Handlers
+	items  items.Handlers
 	// groups groups.Service
 	// identifiers itemidentifiers.Service
 	// inventories inventories.Service
@@ -26,6 +28,7 @@ type publicapi struct {
 func RegisterHandlers(mux *http.ServeMux, db database.Database) {
 	api := publicapi{
 		groups: groups.New(db, ExpansionConfigs, FieldNames),
+		items:  items.New(db, ExpansionConfigs, FieldNames),
 		// groups: groups.NewService(db),
 		// identifiers: itemidentifiers.NewService(db),
 		// inventories: inventories.NewService(db),
@@ -47,7 +50,7 @@ func (api publicapi) registerHandlers(mux *http.ServeMux) {
 	// mux.HandleFunc("GET /people/{id}", v1.GetPerson)
 	// mux.HandleFunc("POST /items", v1.CreateItem)
 	// mux.HandleFunc("DELETE /items/{id}", v1.DeleteItem)
-	// mux.HandleFunc("GET /items", v1.ListItems)
+	mux.HandleFunc("GET /items", api.items.List)
 	// mux.HandleFunc("GET /items/{id}", v1.RetrieveItem)
 	// mux.HandleFunc("PATCH /items/{id}", v1.UpdateItem)
 
@@ -68,6 +71,12 @@ func (api publicapi) buildExpansionConfigs() {
 	ExpansionConfigs["group"] = map[string]com.ExpansionConfig{
 		"parent_group": {
 			Resolver: api.groups,
+			IsArray:  false,
+		},
+	}
+	ExpansionConfigs["item"] = map[string]com.ExpansionConfig{
+		"parent_item": {
+			Resolver: api.items,
 			IsArray:  false,
 		},
 	}
