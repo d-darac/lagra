@@ -50,6 +50,9 @@ RETURNING
 -- name: CreateItemVariants :copyfrom
 INSERT INTO items 
 (
+    id,
+    created_at,
+    updated_at,
     active,
     description,
     name,
@@ -74,7 +77,10 @@ VALUES
     $8,
     $9,
     $10,
-    $11
+    $11,
+    $12,
+    $13,
+    $14
 );
 --
 
