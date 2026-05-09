@@ -18,12 +18,8 @@ type Database struct {
 
 // Config holds settings used to connect to the PostgreSQL instance.
 type Config struct {
-	Host     string
-	Port     int
-	User     string
-	Password string
-	DBName   string
-	SSLMode  string
+	Host, User, Password, DBName, SSLMode string
+	Port                                  int
 }
 
 // New creates a new Database instance by parsing the given configuration,

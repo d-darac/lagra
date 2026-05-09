@@ -9,28 +9,22 @@ import (
 )
 
 type GroupRow struct {
-	ID            uuid.UUID
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
-	Description   sql.NullString
-	Name          string
-	ParentGroupID uuid.NullUUID
+	CreatedAt, UpdatedAt time.Time
+	Name                 string
+	Description          sql.NullString
+	ParentGroupID        uuid.NullUUID
+	ID                   uuid.UUID
 }
 
 type ItemRow struct {
-	ID                uuid.UUID
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
-	Active            bool
-	Description       sql.NullString
-	GroupID           uuid.NullUUID
-	HasVariants       bool
-	ItemIdentifiersID uuid.NullUUID
-	InventoryID       uuid.NullUUID
-	Name              string
-	ParentItemID      uuid.NullUUID
-	PriceAmount       sql.NullInt32
-	PriceCurrency     sqlc.NullCurrency
-	Type              sqlc.ItemType
-	Variant           bool
+	CreatedAt,
+	UpdatedAt time.Time
+	Type                                                  sqlc.ItemType
+	Name                                                  string
+	PriceCurrency                                         sqlc.NullCurrency
+	Description                                           sql.NullString
+	PriceAmount                                           sql.NullInt32
+	GroupID, ItemIdentifiersID, InventoryID, ParentItemID uuid.NullUUID
+	ID                                                    uuid.UUID
+	Active, HasVariants, Variant                          bool
 }
