@@ -35,3 +35,10 @@ func ParseNull(v *bool) NullBool {
 	}
 	return nullBool
 }
+
+func FromNullBool(v NullBool) bool {
+	if v.Valid {
+		return v.Bool
+	}
+	return v.Valid
+}
